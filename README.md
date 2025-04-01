@@ -51,4 +51,4 @@ mvn clean install
 
 # Passo 9 - Executar o programa
 
-Reinicie o VS Code e execute o programa:
+Reinicie o VS Code e execute o App.java (em src/main/java/io/sim)
