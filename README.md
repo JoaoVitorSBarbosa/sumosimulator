@@ -33,13 +33,15 @@ obs: os comandos devem ser executados na pasta raiz do projeto.
 
 mvn install:install-file -Dfile="./lib/sumo/junit.jar" -DgroupId="junit" -DartifactId="junit" -Dversion="junit" -Dpackaging="jar" -DgeneratePom=true
 
-mvn install:install-file -Dfile="./lib/sumo/libsumo-1.18.0-sources.jar" -DgroupId="libsumo-1.18.0-sources" -DartifactId="libsumo-1.18.0-sources" -Dversion="libsumo-1.18.0-sources" -Dpackaging="jar" -DgeneratePom=true
+mvn install:install-file -Dfile="./lib/sumo/libsumo-1.23.1.jar" -DgroupId="libsumo-1.23.1" -DartifactId="libsumo-1.23.1" -Dversion="libsumo-1.23.1" -Dpackaging="jar" -DgeneratePom=true
 
-mvn install:install-file -Dfile="./lib/sumo/libsumo-1.18.0.jar" -DgroupId="libsumo-1.18.0" -DartifactId="libsumo-1.18.0" -Dversion="libsumo-1.18.0" -Dpackaging="jar" -DgeneratePom=true
+mvn install:install-file -Dfile="./lib/sumo/libtraci-1.23.1.jar" -DgroupId="libtraci-1.23.1" -DartifactId="libtraci-1.23.1" -Dversion="libtraci-1.23.1" -Dpackaging="jar" -DgeneratePom=true
 
-mvn install:install-file -Dfile="./lib/sumo/libtraci-1.18.0-sources.jar" -DgroupId="libtraci-1.18.0-sources" -DartifactId="libtraci-1.18.0-sources" -Dversion="libtraci-1.18.0-sources" -Dpackaging="jar" -DgeneratePom=true
+mvn install:install-file -Dfile="./lib/sumo/libtraci-1.23.1-sources.jar" -DgroupId="libtraci-1.23.1-sources" -DartifactId="libtraci-1.23.1-sources" -Dversion="libtraci-1.23.1-sources" -Dpackaging="jar" -DgeneratePom=true
 
-mvn install:install-file -Dfile="./lib/sumo/libtraci-1.18.0.jar" -DgroupId="libtraci-1.18.0" -DartifactId="libtraci-1.18.0" -Dversion="libtraci-1.18.0" -Dpackaging="jar" -DgeneratePom=true
+mvn install:install-file -Dfile="./lib/sumo/libsumo-1.23.1-sources.jar" -DgroupId="libsumo-1.23.1-sources" -DartifactId="libsumo-1.23.1-sources" -Dversion="libsumo-1.23.1-sources" -Dpackaging="jar" -DgeneratePom=true
+
+mvn install:install-file -Dfile="./lib/sumo/libtraci-1.23.1.jar" -DgroupId="libtraci-1.23.1" -DartifactId="libtraci-1.18.0" -Dversion="libtraci-1.23.1" -Dpackaging="jar" -DgeneratePom=true
 
 mvn install:install-file -Dfile="./lib/sumo/lisum-core.jar" -DgroupId="lisum-core" -DartifactId="lisum-core" -Dversion="lisum-core" -Dpackaging="jar" -DgeneratePom=true
 
@@ -47,8 +49,17 @@ mvn install:install-file -Dfile="./lib/sumo/lisum-gui.jar" -DgroupId="lisum-gui"
 
 mvn install:install-file -Dfile="./lib/sumo/TraaS.jar" -DgroupId="TraaS" -DartifactId="TraaS" -Dversion="TraaS" -Dpackaging="jar" -DgeneratePom=true
 
+mvn install:install-file -Dfile="./lib/sumo/gson-2.13.1.jar" -DgroupId="GSON" -DartifactId="TraaS" -Dversion="GSON" -Dpackaging="jar" -DgeneratePom=true
+
+
 mvn clean install
 
 # Passo 9 - Executar o programa
 
 Reinicie o VS Code e execute o App.java (em src/main/java/io/sim)
+
+# gerar mapa
+
+   netconvert --osm-files map.osm -o map.net.xml
+   polyconvert --net-file map.net.xml --osm-files map.osm --type-file typemap.xml -o map.poly.xml
+   python randomTrips.py -n map.net.xml -r map.rou.xml -e 200 -l 

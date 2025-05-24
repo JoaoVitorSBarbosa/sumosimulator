@@ -1,68 +1,54 @@
 package io.sim;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+
+import it.polito.appeal.traci.SumoTraciConnection;
+import java.util.ArrayList;
+
+import de.tudresden.sumo.cmd.Simulation;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 
-import de.tudresden.sumo.objects.SumoColor;
-import it.polito.appeal.traci.SumoTraciConnection;
-
 public class EnvSimulator extends Thread{
-
+	private Company company;
+	private ArrayList<Rota> listaRotas;
     private SumoTraciConnection sumo;
+	private AlphaBank banco;
+	private static ServerSocket server;
 
-    public EnvSimulator(){
-
+    public EnvSimulator() {
+		
     }
 
     public void run(){
-
-		/* SUMO */
 		String sumo_bin = "sumo-gui";		
 		String config_file = "map/map.sumo.cfg";
-		
+
 		// Sumo connection
 		this.sumo = new SumoTraciConnection(sumo_bin, config_file);
 		sumo.addOption("start", "1"); // auto-run on GUI show
-		sumo.addOption("quit-on-end", "1"); // auto-close on end
+		//sumo.addOption("quit-on-end", "1"); // auto-close on end
 
 		try {
 			sumo.runServer(12345);
-
-			Itinerary i1 = new Itinerary("data/dados2.xml", "0");
-			Itinerary i2 = new Itinerary("data/dados2.xml", "1");
-
-			if (i1.isOn()) {
-
-				// fuelType: 1-diesel, 2-gasoline, 3-ethanol, 4-hybrid
-				int fuelType = 2;
-				int fuelPreferential = 2;
-				double fuelPrice = 3.40;
-				int personCapacity = 1;
-				int personNumber = 1;
-
-				SumoColor green = new SumoColor(0, 255, 0, 126);
-				Auto a1 = new Auto(true, "CAR1", green,"D1", sumo, 500, fuelType, fuelPreferential, fuelPrice, personCapacity, personNumber);
-				SumoColor red = new SumoColor(255, 0, 0, 126);
-				Auto a2 = new Auto(true, "CAR2", red,"D2", sumo, 500, fuelType, fuelPreferential, fuelPrice, personCapacity, personNumber);
-
-				TransportService tS1 = new TransportService(true, "CAR1", i1, a1, sumo);
-				TransportService tS2 = new TransportService(true, "CAR2", i2, a2, sumo);
-				tS1.start();
-				tS2.start();
-				Thread.sleep(5000);
-				a1.start();
-				Thread.sleep(5000);
-				a2.start();
-			}
-
-		
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} catch (Exception e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		company = new Company(sumo);
+		company.start();
 
+		banco = new AlphaBank();
+		company = new Company(sumo);
     }
+	
 
 }
