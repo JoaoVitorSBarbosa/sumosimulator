@@ -4,16 +4,15 @@ import de.tudresden.sumo.cmd.Simulation;
 import de.tudresden.sumo.objects.SumoColor;
 import it.polito.appeal.traci.SumoTraciConnection;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.Serial;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.xerces.xs.StringList;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -25,16 +24,17 @@ public class Company extends Thread {
     private int conta;
     private BotPayment bot;
     private ArrayList<Driver> funcionarios;
-    private ArrayList<Rota> rotasAguardando;
-    private ArrayList<Rota> rotasEmExecucao;
-    private ArrayList<Rota> rotasExecutadas;
+    private Collection<Rota> rotasAguardando;
+    private Collection<Rota> rotasEmExecucao;
+    private Collection<Rota> rotasExecutadas;
     private ArrayList<Car> carros;
-    private ArrayList<TransportService> servicos;
+    private Collection<TransportService> servicos;
     private Boolean on_off;
     SumoColor green;
     private SumoTraciConnection sumo;
     private int aqRate;
     private String senha;
+    private int arrived;
 
     private class BotPayment extends Thread {
         private double valorKM = 3.25;
@@ -132,15 +132,15 @@ public class Company extends Thread {
 
     public Company(SumoTraciConnection sumo) {
         this.on_off = true;
-        aqRate = 500;
+        aqRate = 1000;
         green = new SumoColor(0, 255, 0, 126);
         this.sumo = sumo;
         this.funcionarios = getDrivers();
         this.carros = getCars();
-        rotasAguardando = new ArrayList<Rota>();
-        rotasEmExecucao = new ArrayList<Rota>();
-        rotasExecutadas = new ArrayList<Rota>();
-        this.servicos = new ArrayList<TransportService>();
+        rotasAguardando = Collections.synchronizedCollection(new ArrayList<Rota>());
+        rotasEmExecucao = Collections.synchronizedCollection(new ArrayList<Rota>());
+        rotasExecutadas = Collections.synchronizedCollection(new ArrayList<Rota>());
+        this.servicos = Collections.synchronizedCollection(new ArrayList<TransportService>());
         conta = 0;
         bot = new BotPayment();
 
@@ -159,18 +159,20 @@ public class Company extends Thread {
 
     @Override
     public void run() {
-        for (int i = 0; i < funcionarios.size(); i++) {
-            funcionarios.get(i).start();
+        for (Driver funcs : funcionarios) {
+            funcs.start();
         }
-        for (int i = 0; i < servicos.size(); i++) {
-            servicos.get(i).start();
-            rotasEmExecucao.add(servicos.get(i).getRota());
-            rotasAguardando.remove(servicos.get(i).getRota());
+        for (TransportService service : servicos) {
+            service.start();
+            rotasEmExecucao.add(service.getRota());
+            rotasAguardando.remove(service.getRota());
         }
         while (this.on_off) {
             try {
                 removeCorridasFinalizadas();
                 this.sumo.do_timestep();
+
+                this.on_off = getHaveCar();
             } catch (Exception e) {
             }
             try {
@@ -204,10 +206,19 @@ public class Company extends Thread {
 
     }
 
+    public boolean getOnOff() {
+        return on_off;
+    }
+
+    public boolean getHaveCar() {
+        return arrived < carros.size();
+    }
+
     public void removeCorridasFinalizadas() {
         try {
             String[] listaStrings;
             String corridasFinalizadas = String.valueOf(sumo.do_job_get(Simulation.getArrivedIDList()));
+            arrived = arrived + Integer.parseInt(String.valueOf(sumo.do_job_get(Simulation.getArrivedNumber())));
             if (!corridasFinalizadas.equals("[]")) {
                 corridasFinalizadas = corridasFinalizadas.substring(0, corridasFinalizadas.length() - 1);
                 corridasFinalizadas = corridasFinalizadas.substring(1, corridasFinalizadas.length());
@@ -215,22 +226,27 @@ public class Company extends Thread {
                 listaStrings = corridasFinalizadas.split(",");
 
                 for (String s : listaStrings) {
-                    System.out.println(s);
-                    boolean found = false;
-                    int idx = 0;
-
+                    Rota aRemover = null;
                     for (Rota rota : rotasEmExecucao) {
-
                         if (rota.getIDRota().equals(s)) {
-                            found = true;
-                            rotasExecutadas.add(rotasEmExecucao.remove(idx));
-                            
-                            servicos.get(idx).getAuto().setOn_off(false); //Para a thread
+                            aRemover = rota;
+
+                            for (TransportService servico : servicos) {
+                                Car carro = servico.getAuto();
+                                if (carro.getIdAuto().equals(s)) {
+                                    System.out.println(carro.getIdAuto());       
+
+                                    carro.interrupt();
+
+                                    carro.setOn_off(false);
+
+                                }
+                            }
                         }
-                        if (!found) {
-                            idx++;
-                        }
+
                     }
+                    rotasEmExecucao.remove(aRemover);
+                    rotasExecutadas.add(aRemover);
                 }
 
             }

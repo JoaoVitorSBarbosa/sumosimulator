@@ -36,7 +36,7 @@ public class EnvSimulator extends Thread{
 		// Sumo connection
 		this.sumo = new SumoTraciConnection(sumo_bin, config_file);
 		sumo.addOption("start", "1"); // auto-run on GUI show
-		//sumo.addOption("quit-on-end", "1"); // auto-close on end
+		sumo.addOption("quit-on-end", "1"); // auto-close on end
 
 		try {
 			sumo.runServer(12345);
@@ -47,7 +47,12 @@ public class EnvSimulator extends Thread{
 		company.start();
 
 		banco = new AlphaBank();
-		company = new Company(sumo);
+		
+		if(!company.getOnOff()) {
+			if(!sumo.isClosed()) {
+				sumo.close(); //Fecha o sumo se acabou os carros
+			}
+		}
     }
 	
 

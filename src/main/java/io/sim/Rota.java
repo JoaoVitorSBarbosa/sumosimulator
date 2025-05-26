@@ -63,7 +63,7 @@ public class Rota {
 	public boolean equals(String idString) {
 		return idString.equals(idRota);
 	}
-	public String getIDRota() {
+	public synchronized String getIDRota() {
 		return this.idRota;
 	}
 

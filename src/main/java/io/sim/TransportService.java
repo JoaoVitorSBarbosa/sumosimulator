@@ -27,10 +27,8 @@ public class TransportService extends Thread {
 	@Override
 	public void run() {
 		try {
-			
 			this.initializeRoutes();
 			this.auto.start();
-			
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -92,7 +90,7 @@ public class TransportService extends Thread {
 		return this.sumo;
 	}
 
-	public Auto getAuto() {
+	public Car getAuto() {
 		return this.auto;
 	}
 

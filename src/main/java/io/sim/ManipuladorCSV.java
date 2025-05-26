@@ -14,11 +14,6 @@ public class ManipuladorCSV {
 
     public ManipuladorCSV(String caminhoDoArquivo) {
         this.caminho = caminhoDoArquivo;
-        try {
-            obj = new BufferedWriter(new FileWriter(caminho));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public void delete()  {
@@ -32,19 +27,25 @@ public class ManipuladorCSV {
     }
     
     public void writeCSV(String[] info) {
+        
         try {
+            obj = new BufferedWriter(new FileWriter(caminho));
             String result = Arrays.stream(info).collect(Collectors.joining(","));
             result = result + "\n";
             obj.write(result);
+            obj.close();
         } catch (IOException e) {
             System.out.println("Erro ao escrever o arquivo: " + e.getMessage());
         }
     }
-    public void appendCSV(String[] info) {
+    public synchronized void appendCSV(String[] info) {
+        //System.out.println(Arrays.stream(info).collect(Collectors.joining(",")));
         try {
+            obj = new BufferedWriter(new FileWriter(caminho,true));
             String result = Arrays.stream(info).collect(Collectors.joining(","));
             result = result + "\n";
             obj.append(result);
+            obj.close();
         } catch (IOException e) {
             System.out.println("Erro ao escrever o arquivo: " + e.getMessage());
         }
