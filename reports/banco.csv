@@ -1,103 +1,332 @@
 ID Pagamento,TimeStamp,Nome Pagador,Nome Recebedor,Valor
-1,19.8,Company,Isabela Andrade,347.47
-2,21.8,Company,Larissa Araújo,347.47
-3,25.1,Company,Mônica Vieira,347.47
-4,28.0,Company,Letícia Freitas,347.47
-5,29.4,Company,Roberto Moura,347.47
-6,33.9,Company,Cristina Nunes,347.47
-7,36.5,Company,Renata Guimarães,347.47
-8,40.0,Company,Felipe Andrade,347.47
-9,44.3,Company,Roberto Miranda,347.47
-10,46.2,Company,Mariana Souza,347.47
-11,48.3,Company,Henrique Peixoto,347.47
-12,48.7,Company,Marcelo Marques,347.47
-13,51.6,Company,Eduardo Nunes,347.47
-14,53.1,Company,Vanessa Ribeiro,347.47
-15,54.6,Company,Henrique Correia,347.47
-16,55.0,Company,Mariana Cunha,347.47
-17,56.1,Company,Carlos Nunes,347.47
-18,58.1,Company,Carolina Teixeira,347.47
-19,59.1,Company,Juliana Lopes,347.47
-20,61.0,Company,Jéssica Rodrigues,347.47
-21,63.4,Company,Henrique Gomes,347.47
-22,64.6,Company,Camila Rocha,347.47
-23,64.6,Company,Paulo Pinto,347.47
-24,65.0,Company,Matheus Lopes,347.47
-25,66.5,Company,Maria Andrade,347.47
-26,67.2,Company,Carolina Dias,347.47
-27,68.8,Company,Lucas Miranda,347.47
-28,69.2,Company,Maria Cunha,347.47
-29,70.3,Company,Felipe Nunes,347.47
-30,77.7,Company,Jéssica Carvalho,347.47
-31,79.8,Company,Pedro Nascimento,347.47
-32,79.8,Company,Alexandre Nascimento,347.47
-33,81.6,Company,Beatriz Ferreira,347.47
-34,82.9,Company,Isabela Lopes,347.47
-35,85.5,Company,Letícia Machado,347.47
-36,86.5,Company,André Pereira,347.47
-37,87.0,Company,Henrique Alves,347.47
-38,89.9,Company,Pedro Azevedo,347.47
-39,92.5,Company,Gabriela Gomes,347.47
-40,94.2,Company,Felipe Lopes,347.47
-41,96.6,Company,Renata Teixeira,347.47
-42,97.0,Company,Marcelo Cardoso,347.47
-43,98.5,Company,Letícia Miranda,347.47
-44,99.8,Company,Larissa Vieira,347.47
-45,100.9,Company,Amanda Moreira,347.47
-46,101.1,Company,Cristina Ribeiro,347.47
-47,102.4,Company,Rafael Correia,347.47
-48,102.6,Company,Ana Mendes,347.47
-49,102.7,Company,Henrique Dias,347.47
-50,102.8,Company,Jéssica Pinto,347.47
-51,104.3,Company,Lucas Monteiro,347.47
-52,104.9,Company,Pedro Gonçalves,347.47
-53,108.3,Company,Guilherme Correia,347.47
-54,108.7,Company,Ricardo Mendes,347.47
-55,111.4,Company,Mariana Araújo,347.47
-56,111.8,Company,Larissa Duarte,347.47
-57,114.0,Company,João Monteiro,347.47
-58,117.1,Company,Bianca Oliveira,347.47
-59,117.9,Company,João Lima,347.47
-60,120.9,Company,Bruno Freitas,347.47
-61,124.2,Company,Vinícius Duarte,347.47
-62,124.6,Company,Camila Pinto,347.47
-63,125.3,Company,Roberto Gonçalves,347.47
-64,125.4,Company,Pedro Rocha,347.47
-65,127.1,Company,Gabriela Nascimento,347.47
-66,128.4,Company,Bianca Ferreira,347.47
-67,129.9,Company,Isabela Mendes,347.47
-68,130.5,Company,Jéssica Rocha,347.47
-69,133.2,Company,Marcelo Almeida,347.47
-70,133.3,Company,Pedro Teixeira,347.47
-71,133.8,Company,Vanessa Souza,347.47
-72,134.8,Company,Jéssica Pereira,347.47
-73,137.8,Company,Ana Martins,347.47
-74,138.2,Company,Natália Alves,347.47
-75,138.4,Company,Felipe Cunha,347.47
-76,138.5,Company,Camila Ferreira,347.47
-77,141.3,Company,Diego Monteiro,347.47
-78,142.3,Company,Fernando Monteiro,347.47
-79,142.9,Company,Leonardo Cardoso,347.47
-80,142.9,Company,André Ramos,347.47
-81,146.0,Company,Patrícia Duarte,347.47
-82,149.3,Company,Amanda Almeida,347.47
-83,153.4,Company,Larissa Gonçalves,347.47
-84,157.1,Company,Rafael Costa,347.47
-85,159.6,Company,Paulo Peixoto,347.47
-86,160.7,Company,Eduardo Cunha,347.47
-87,162.0,Company,Bruno Barros,347.47
-88,167.0,Company,André Lima,347.47
-89,167.4,Company,Rafael Ferreira,347.47
-90,167.5,Company,Guilherme Gonçalves,347.47
-91,168.0,Company,Natália Machado,347.47
-92,168.7,Company,Gustavo Cavalcanti,347.47
-93,168.8,Company,Alexandre Marques,347.47
-94,172.1,Company,Vinícius Miranda,347.47
-95,172.2,Company,Larissa Ferreira,347.47
-96,172.3,Company,Henrique Lima,347.47
-97,173.5,Company,Cristina Pereira,347.47
-98,174.9,Company,Vinícius Cardoso,347.47
-99,175.4,Company,Ricardo Nunes,347.47
-100,175.6,Company,Thiago Carvalho,347.47
-101,176.4,Company,João Teixeira,347.47
-102,180.6,Company,Carlos Ferreira,347.47
+1,20.2,Company,Isabela Andrade,347.47
+2,23.5,Company,Larissa Araújo,347.47
+3,25.0,Company,Mônica Vieira,347.47
+4,29.6,Company,Roberto Moura,347.47
+5,33.4,Company,Letícia Freitas,347.47
+6,34.1,Company,Cristina Nunes,347.47
+7,36.6,Company,Renata Guimarães,347.47
+8,43.0,Company,Felipe Andrade,347.47
+9,46.5,Company,Mariana Souza,347.47
+10,48.2,Company,Henrique Peixoto,347.47
+11,49.7,Company,Marcelo Marques,347.47
+12,51.4,Maria Andrade,Fuel Station,153.4064872748261
+13,51.9,Henrique Teixeira,Fuel Station,153.46128137337064
+14,51.9,Henrique Alves,Fuel Station,152.75598652300405
+15,51.9,Henrique Lima,Fuel Station,153.21153176873645
+16,52.5,Natália Machado,Fuel Station,155.19160826734182
+17,52.3,Marcelo Almeida,Fuel Station,153.35113277113174
+18,52.6,Marcelo Cardoso,Fuel Station,156.5204372500025
+19,52.6,Cristina Ribeiro,Fuel Station,156.64821761525428
+20,52.6,Lucas Monteiro,Fuel Station,153.63460185185184
+21,53.6,Company,Vanessa Ribeiro,347.47
+22,52.6,Felipe Lopes,Fuel Station,155.91707342270965
+23,52.1,Gustavo Gomes,Fuel Station,153.70940547098854
+24,53.0,Bianca Oliveira,Fuel Station,156.4760325012676
+25,53.0,Luiz Alves,Fuel Station,152.98906581324638
+26,52.1,Rafael Correia,Fuel Station,153.34619306116585
+27,52.1,Jéssica Martins,Fuel Station,152.8196907416161
+28,52.7,Thiago Monteiro,Fuel Station,156.32251899360358
+29,52.6,Paulo Pinto,Fuel Station,154.53426454804858
+30,52.7,Larissa Ferreira,Fuel Station,155.64456137183032
+31,52.7,Bruno Barros,Fuel Station,154.58701005756944
+32,52.7,Jéssica Rocha,Fuel Station,154.5811767100804
+33,52.7,Larissa Costa,Fuel Station,156.34921544855888
+34,52.7,Ricardo Mendes,Fuel Station,154.03477824330201
+35,52.7,Letícia Miranda,Fuel Station,157.05344414393113
+36,52.7,Vanessa Moura,Fuel Station,157.3325831984178
+37,52.7,André Santos,Fuel Station,156.53350227889626
+38,52.7,Gabriela Teixeira,Fuel Station,156.01956411436217
+39,52.7,Lucas Miranda,Fuel Station,156.82102118638994
+40,53.0,João Monteiro,Fuel Station,156.78801113302225
+41,52.7,Jéssica Pinto,Fuel Station,155.3598213957856
+42,53.0,Maria Almeida,Fuel Station,157.39977616232585
+43,53.0,Pedro Teixeira,Fuel Station,155.04754897279759
+44,53.0,Camila Castro,Fuel Station,155.97237257995351
+45,52.6,Felipe Cunha,Fuel Station,153.63460185185184
+46,51.8,Ana Ramos,Fuel Station,155.46623057910796
+47,53.0,Letícia Machado,Fuel Station,157.27163864437034
+48,52.4,Fernando Monteiro,Fuel Station,153.8250509147009
+49,53.3,Guilherme Correia,Fuel Station,155.92313394964398
+50,52.9,Renata Teixeira,Fuel Station,156.537241024474
+51,53.2,Diego Costa,Fuel Station,155.63089599899828
+52,52.7,João Campos,Fuel Station,154.7829287274819
+53,52.6,Matheus Azevedo,Fuel Station,160.35326573535963
+54,52.8,Sandra Pereira,Fuel Station,155.94656037456934
+55,52.9,Paulo Peixoto,Fuel Station,155.55932105119
+56,52.7,Eduardo Nunes,Fuel Station,154.34830522086315
+57,52.7,Henrique Correia,Fuel Station,154.3229590003107
+58,52.0,Diego Monteiro,Fuel Station,152.91925159051365
+59,52.7,Luiz Peixoto,Fuel Station,156.1529966728692
+60,52.7,Pedro Ferreira,Fuel Station,155.93177145084644
+61,53.2,Jéssica Carvalho,Fuel Station,155.81758407693437
+62,52.7,Gabriela Gomes,Fuel Station,157.02491757018402
+63,53.2,Beatriz Ferreira,Fuel Station,155.9851793147943
+64,53.3,Paulo Lima,Fuel Station,155.78476341182719
+65,53.4,Sandra Ramos,Fuel Station,156.0774642868503
+66,53.5,Patrícia Carvalho,Fuel Station,156.51438663448445
+67,53.6,Bianca Nascimento,Fuel Station,157.36335594507725
+68,53.6,André Pereira,Fuel Station,157.37498874734956
+69,53.6,Alexandre Nascimento,Fuel Station,157.39474337998527
+70,53.5,Paulo Alves,Fuel Station,156.36915782621065
+71,53.5,João Silva,Fuel Station,156.68190429140031
+72,54.3,Rafael Costa,Fuel Station,154.84328416687185
+73,55.0,Company,Mariana Cunha,347.47
+74,56.2,Company,Carlos Nunes,347.47
+75,58.1,Company,Carolina Teixeira,347.47
+76,58.4,Company,Roberto Miranda,347.47
+77,58.4,Company,Henrique Correia,347.47
+78,59.2,Company,Juliana Lopes,347.47
+79,60.9,Company,Jéssica Rodrigues,347.47
+80,63.6,Company,Guilherme Correia,347.47
+81,64.5,Company,Camila Rocha,347.47
+82,65.2,Company,Paulo Pinto,347.47
+83,65.3,Company,Matheus Lopes,347.47
+84,65.6,Company,Maria Andrade,347.47
+85,66.8,Company,Henrique Gomes,347.47
+86,68.8,Company,Lucas Miranda,347.47
+87,70.5,Company,Felipe Nunes,347.47
+88,72.2,Company,Eduardo Nunes,347.47
+89,77.0,Company,Larissa Vieira,347.47
+90,80.1,Company,Pedro Nascimento,347.47
+91,80.2,Company,Alexandre Nascimento,347.47
+92,82.2,Company,Beatriz Ferreira,347.47
+93,85.4,Company,Letícia Machado,347.47
+94,85.9,Company,Isabela Lopes,347.47
+95,86.9,Company,André Pereira,347.47
+96,88.0,Company,Henrique Alves,347.47
+97,89.6,Company,Maria Cunha,347.47
+98,89.7,Company,Pedro Azevedo,347.47
+99,91.2,Company,Letícia Miranda,347.47
+100,92.6,Company,Gabriela Gomes,347.47
+101,96.1,Company,Ana Mendes,347.47
+102,96.8,Company,Renata Teixeira,347.47
+103,97.0,Company,Marcelo Cardoso,347.47
+104,99.3,Company,Felipe Lopes,347.47
+105,101.2,Company,Cristina Ribeiro,347.47
+106,102.5,Company,Henrique Dias,347.47
+107,102.6,Company,Rafael Correia,347.47
+108,102.9,Company,Amanda Moreira,347.47
+109,102.9,Company,Jéssica Pinto,347.47
+110,104.6,Henrique Teixeira,Fuel Station,153.85569814814815
+111,104.7,Company,Rafael Ferreira,347.47
+112,104.7,Company,Pedro Gonçalves,347.47
+113,104.9,Jéssica Martins,Fuel Station,154.14764444444444
+114,104.9,Diego Monteiro,Fuel Station,154.43959074074075
+115,105.0,Ana Ramos,Fuel Station,155.3154296296296
+116,105.1,Larissa Ferreira,Fuel Station,154.39797192332068
+117,105.0,Marcelo Almeida,Fuel Station,153.85569814814815
+118,105.1,Natália Machado,Fuel Station,153.5637518518518
+119,105.2,Gustavo Gomes,Fuel Station,155.0234833333333
+120,105.9,Fernando Monteiro,Fuel Station,156.19126851851854
+121,105.9,Pedro Teixeira,Fuel Station,154.43959074074075
+122,105.9,Gabriela Teixeira,Fuel Station,155.31542962962965
+123,105.9,Felipe Cunha,Fuel Station,155.60737592592594
+124,105.9,Camila Castro,Fuel Station,154.43959074074075
+125,106.0,Diego Costa,Fuel Station,154.1476444444444
+126,106.0,Sandra Pereira,Fuel Station,155.31542962962962
+127,106.0,Matheus Azevedo,Fuel Station,155.89932222222217
+128,106.0,Ricardo Mendes,Fuel Station,155.60737592592588
+129,106.4,João Monteiro,Fuel Station,155.8993222222222
+130,106.5,Lucas Monteiro,Fuel Station,157.35905370370367
+131,106.5,João Campos,Fuel Station,157.06710740740738
+132,106.5,Paulo Alves,Fuel Station,154.731537037037
+133,106.5,Larissa Costa,Fuel Station,157.06710740740738
+134,106.5,Pedro Ferreira,Fuel Station,157.06710740740738
+135,106.6,Jéssica Carvalho,Fuel Station,155.89932222222217
+136,106.6,Bruno Barros,Fuel Station,157.35905370370367
+137,106.6,Luiz Peixoto,Fuel Station,157.35905370370367
+138,106.7,João Silva,Fuel Station,155.31542962962962
+139,106.7,André Santos,Fuel Station,157.65099999999995
+140,106.6,Patrícia Carvalho,Fuel Station,155.0234833333333
+141,106.7,Luiz Alves,Fuel Station,156.7751611111111
+142,106.7,Maria Almeida,Fuel Station,156.77516111111106
+143,106.6,Paulo Peixoto,Fuel Station,156.77516111111103
+144,106.7,Rafael Costa,Fuel Station,152.97985925925923
+145,107.1,Vanessa Moura,Fuel Station,153.85569814814812
+146,106.7,Bianca Oliveira,Fuel Station,156.7751611111111
+147,107.5,Company,Bruno Freitas,347.47
+148,111.8,Company,Larissa Duarte,347.47
+149,113.0,Company,Jéssica Carvalho,347.47
+150,116.1,Company,João Monteiro,347.47
+151,118.5,Company,Ricardo Mendes,347.47
+152,118.8,Company,João Lima,347.47
+153,120.0,Company,Bianca Oliveira,347.47
+154,120.3,Company,Gabriela Carvalho,347.47
+155,124.2,Company,Vinícius Duarte,347.47
+156,125.1,Company,Sandra Ramos,347.47
+157,127.0,Company,Gabriela Nascimento,347.47
+158,127.4,Company,Jéssica Rocha,347.47
+159,128.6,Company,Pedro Rocha,347.47
+160,134.0,Company,Bianca Ferreira,347.47
+161,134.3,Company,Roberto Gonçalves,347.47
+162,136.0,Company,Isabela Mendes,347.47
+163,136.4,Company,Camila Ferreira,347.47
+164,137.7,Company,Carolina Dias,347.47
+165,137.9,Company,Jéssica Pereira,347.47
+166,138.8,Company,Natália Alves,347.47
+167,139.5,Company,Diego Monteiro,347.47
+168,139.7,Company,Mariana Araújo,347.47
+169,140.9,Company,Marcelo Almeida,347.47
+170,142.4,Company,Fernando Monteiro,347.47
+171,143.1,Company,André Ramos,347.47
+172,146.1,Company,Leonardo Cardoso,347.47
+173,146.1,Company,André Lima,347.47
+174,149.0,Company,Patrícia Duarte,347.47
+175,153.7,Company,Bruno Barros,347.47
+176,154.7,Company,Paulo Lima,347.47
+177,156.6,Company,Ana Martins,347.47
+178,157.1,Company,Rafael Costa,347.47
+179,157.2,Henrique Teixeira,Fuel Station,153.5637518518518
+180,157.5,Jéssica Martins,Fuel Station,153.5637518518518
+181,158.1,Ana Ramos,Fuel Station,155.02348333333327
+182,158.1,Natália Machado,Fuel Station,154.73153703703701
+183,158.1,Gustavo Gomes,Fuel Station,154.43959074074064
+184,158.6,Pedro Teixeira,Fuel Station,153.85569814814806
+185,158.9,Company,Amanda Almeida,347.47
+186,158.9,Gabriela Teixeira,Fuel Station,154.73153703703701
+187,159.0,Diego Costa,Fuel Station,154.731537037037
+188,159.0,Sandra Pereira,Fuel Station,154.73153703703701
+189,159.0,Matheus Azevedo,Fuel Station,154.73153703703701
+190,159.0,Felipe Cunha,Fuel Station,155.0234833333333
+191,159.0,Camila Castro,Fuel Station,155.02348333333327
+192,159.3,Larissa Costa,Fuel Station,154.14764444444447
+193,159.4,João Campos,Fuel Station,154.4395907407407
+194,159.6,Pedro Ferreira,Fuel Station,155.02348333333327
+195,159.6,Lucas Monteiro,Fuel Station,155.0234833333333
+196,159.8,Luiz Peixoto,Fuel Station,155.31542962962965
+197,159.8,André Santos,Fuel Station,155.02348333333333
+198,159.9,Luiz Alves,Fuel Station,155.3154296296296
+199,159.9,Maria Almeida,Fuel Station,155.3154296296296
+200,160.0,Company,Larissa Gonçalves,347.47
+201,159.9,Patrícia Carvalho,Fuel Station,155.6073759259259
+202,160.0,Vanessa Moura,Fuel Station,154.43959074074073
+203,162.8,Company,Paulo Peixoto,347.47
+204,163.7,Company,Ana Gomes,347.47
+205,163.8,Company,Eduardo Cunha,347.47
+206,166.1,Company,Pedro Teixeira,347.47
+207,168.2,Company,Vanessa Moura,347.47
+208,168.7,Company,Gustavo Cavalcanti,347.47
+209,170.4,Company,Tatiana Monteiro,347.47
+210,171.0,Company,Camila Pinto,347.47
+211,171.6,Company,Paulo Alves,347.47
+212,171.6,Company,João Teixeira,347.47
+213,171.7,Company,Guilherme Gonçalves,347.47
+214,173.6,Company,Henrique Lima,347.47
+215,173.8,Company,Alexandre Marques,347.47
+216,174.3,Company,Thiago Marques,347.47
+217,174.5,Company,Felipe Cunha,347.47
+218,175.4,Company,Larissa Ferreira,347.47
+219,175.6,Company,Vanessa Souza,347.47
+220,176.7,Company,Cristina Pereira,347.47
+221,177.1,Company,Camila Castro,347.47
+222,177.4,Company,Paulo Moreira,347.47
+223,178.0,Company,Matheus Azevedo,347.47
+224,178.8,Company,Thiago Carvalho,347.47
+225,179.1,Company,João Campos,347.47
+226,180.8,Company,Beatriz Machado,347.47
+227,181.5,Company,Vinícius Miranda,347.47
+228,182.2,Company,Natália Machado,347.47
+229,182.6,Company,Thiago Monteiro,347.47
+230,183.8,Company,Carlos Ferreira,347.47
+231,187.9,Company,Luiz Peixoto,347.47
+232,188.7,Company,Maria Almeida,347.47
+233,192.4,Company,Ricardo Martins,347.47
+234,195.1,Company,Eduardo Duarte,347.47
+235,195.9,Company,Alexandre Reis,347.47
+236,196.2,Company,Lucas Monteiro,347.47
+237,196.3,Company,Vinícius Cardoso,347.47
+238,201.0,Company,Renata Marques,347.47
+239,202.8,Company,Camila Almeida,347.47
+240,203.3,Company,Camila Barbosa,347.47
+241,203.9,Company,Letícia Costa,347.47
+242,204.2,Company,Sandra Pereira,347.47
+243,208.4,Company,Alexandre Cavalcanti,347.47
+244,210.7,Company,Carolina Mendes,347.47
+245,210.7,Gustavo Gomes,Fuel Station,153.5637518518518
+246,211.0,Henrique Teixeira,Fuel Station,157.06710740740743
+247,211.2,Jéssica Martins,Fuel Station,156.77516111111106
+248,211.3,Company,Gabriela Teixeira,347.47
+249,211.6,Ana Ramos,Fuel Station,156.19126851851848
+250,211.8,Company,Larissa Costa,347.47
+251,212.4,André Santos,Fuel Station,153.5637518518518
+252,212.4,Luiz Alves,Fuel Station,153.27180555555552
+253,212.5,Patrícia Carvalho,Fuel Station,153.5637518518518
+254,212.7,Diego Costa,Fuel Station,156.77516111111106
+255,213.4,Pedro Ferreira,Fuel Station,157.06710740740743
+256,214.6,Company,Gabriela Almeida,347.47
+257,214.7,Company,Amanda Oliveira,347.47
+258,214.8,Company,Daniela Cardoso,347.47
+259,215.3,Company,Pedro Barros,347.47
+260,215.6,Company,Paulo Nunes,347.47
+261,216.0,Company,Leonardo Barros,347.47
+262,216.1,Company,Carlos Araújo,347.47
+263,217.5,Company,Pedro Ribeiro,347.47
+264,217.9,Company,Fernanda Cardoso,347.47
+265,218.3,Company,Carlos Moura,347.47
+266,218.7,Company,Natália Peixoto,347.47
+267,219.8,Company,Bianca Nascimento,347.47
+268,220.6,Company,Tatiana Pinto,347.47
+269,225.1,Company,Jéssica Martins,347.47
+270,225.6,Company,Guilherme Barbosa,347.47
+271,226.8,Company,Cristina Melo,347.47
+272,229.8,Company,Ricardo Nunes,347.47
+273,230.3,Company,João Silva,347.47
+274,234.4,Company,Carlos Reis,347.47
+275,234.8,Company,Jéssica Marques,347.47
+276,235.6,Company,Diego Alves,347.47
+277,236.2,Company,Lucas Fernandes,347.47
+278,237.2,Company,Luiz Andrade,347.47
+279,237.3,Company,Mariana Machado,347.47
+280,237.7,Company,Fernanda Duarte,347.47
+281,239.5,Company,Gabriela Martins,347.47
+282,240.9,Company,Henrique Costa,347.47
+283,241.8,Company,Pedro Ferreira,347.47
+284,242.1,Company,Luiz Machado,347.47
+285,242.1,Company,Juliana Campos,347.47
+286,244.0,Company,Guilherme Pinto,347.47
+287,244.2,Company,Guilherme Costa,347.47
+288,245.3,Company,Felipe Costa,347.47
+289,245.6,Company,Marcelo Duarte,347.47
+290,246.0,Company,Tatiana Martins,347.47
+291,249.3,Company,Vanessa Campos,347.47
+292,249.7,Company,João Andrade,347.47
+293,251.6,Company,Tatiana Gonçalves,347.47
+294,251.8,Company,Guilherme Freitas,347.47
+295,251.8,Company,Henrique Teixeira,347.47
+296,253.5,Company,Carolina Peixoto,347.47
+297,253.7,Company,Maria Castro,347.47
+298,256.2,Company,Marcelo Dias,347.47
+299,257.0,Company,Gustavo Ferreira,347.47
+300,259.9,Company,Juliana Costa,347.47
+301,260.5,Company,Paulo Cavalcanti,347.47
+302,260.7,Company,André Santos,347.47
+303,263.3,Gustavo Gomes,Fuel Station,153.56375185185192
+304,264.1,Ana Ramos,Fuel Station,153.27180555555563
+305,265.0,Luiz Alves,Fuel Station,153.56375185185183
+306,265.2,Company,Eduardo Castro,347.47
+307,265.3,Diego Costa,Fuel Station,153.56375185185192
+308,265.4,Patrícia Carvalho,Fuel Station,154.43959074074064
+309,265.5,Company,Beatriz Freitas,347.47
+310,268.2,Company,Luiz Ferreira,347.47
+311,275.1,Company,Lucas Nascimento,347.47
+312,275.8,Company,Marcelo Mendes,347.47
+313,276.6,Company,Rodrigo Gonçalves,347.47
+314,281.9,Company,Pedro Cunha,347.47
+315,286.2,Company,Isabela Correia,347.47
+316,288.3,Company,Leonardo Pinto,347.47
+317,291.0,Company,Ana Duarte,347.47
+318,291.1,Company,Larissa Reis,347.47
+319,291.8,Company,Patrícia Carvalho,347.47
+320,292.2,Company,Luiz Alves,347.47
+321,311.3,Company,Diego Santos,347.47
+322,312.3,Company,Paulo Cardoso,347.47
+323,312.4,Company,Ana Ramos,347.47
+324,315.8,Gustavo Gomes,Fuel Station,153.27180555555546
+325,318.1,Company,Larissa Rocha,347.47
+326,318.3,Company,Juliana Rocha,347.47
+327,319.2,Diego Costa,Fuel Station,157.35905370370352
+328,319.4,Company,Mônica Gomes,347.47
+329,359.6,Company,Diego Costa,347.47
+330,369.7,Gustavo Gomes,Fuel Station,157.35905370370352
+331,398.5,Company,Gustavo Gomes,347.47

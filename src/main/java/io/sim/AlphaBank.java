@@ -32,16 +32,10 @@ public class AlphaBank extends Servidor {
     private ArrayList<Cliente> listaClientes;
     Client cli;
     Servidor serverBank;
-    private static ServerSocket server;
-    private static ArrayList<BufferedWriter> clientes;
-    private String nome;
-    private Socket con;
-    private InputStream in;
-    private InputStreamReader inr;
-    private BufferedReader bfr;
     private int idPagamento;
     private ManipuladorCSV manipulador;
-    private class Cliente extends Thread {
+
+    private class Cliente {
         private String nome;
         private String conta;
         private double saldo;
@@ -93,9 +87,9 @@ public class AlphaBank extends Servidor {
     private void addClients() {
         try {
             listaClientes.add(new Cliente("1000", "Company",
-                            Codec.toHexString(Codec.getSHA("079816")), "7559858051", 10000000));
-             listaClientes.add(new Cliente("1001", "Posto",
-                            Codec.toHexString(Codec.getSHA("984321")), "1551363287", 10000000));
+                    Codec.toHexString(Codec.getSHA("079816")), "7559858051", 10000000));
+            listaClientes.add(new Cliente("1001", "Posto",
+                    Codec.toHexString(Codec.getSHA("984321")), "1551363287", 10000000));
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document doc = builder.parse("data/pessoas.xml");
@@ -111,7 +105,8 @@ public class AlphaBank extends Servidor {
                     Node nodeSenha = nodes.item(3);
                     Node nodeConta = nodes.item(0);
                     listaClientes.add(new Cliente(nodeID.getNodeValue(), nodeNome.getNodeValue(),
-                            Codec.toHexString(Codec.getSHA(nodeSenha.getNodeValue())), nodeConta.getNodeValue(), valorInicial));
+                            Codec.toHexString(Codec.getSHA(nodeSenha.getNodeValue())), nodeConta.getNodeValue(),
+                            valorInicial));
                 }
             }
         } catch (SAXException e) {
@@ -127,31 +122,35 @@ public class AlphaBank extends Servidor {
 
     @Override
     protected void handleClientMessage(Socket clientSocket, String message, BufferedWriter writer) {
- 
+
         idPagamento++;
         JsonObject jsonObject = JsonParser.parseString(message).getAsJsonObject();
-        String nomeSender = jsonObject.get("nomeSender").getAsString();
-        String nomeRec = jsonObject.get("nomeRec").getAsString();
-        String timeStamp = jsonObject.get("timeStamp").getAsString();
-        String contaBancoSender = jsonObject.get("contaBancoSender").getAsString();
-        String contaBancoRec = jsonObject.get("contaBancoRec").getAsString();
-        String valor = jsonObject.get("valor").getAsString();
-        String senhasender = jsonObject.get("senhaSender").getAsString();
-        
-        for(Cliente cli : listaClientes) {
-            if(cli.getConta().equals(contaBancoSender)) {
-                if(cli.getSenha().equals(senhasender)) {
-                    cli.sacar(Double.parseDouble(valor));
-                } else {
-                    System.out.println("Senha Banco: " + cli.getSenha() + " Senha Req: " + senhasender);
+        String comando = jsonObject.get("comando").getAsString();
+        if (comando.equals("pagar")) {
+
+            String nomeSender = jsonObject.get("nomeSender").getAsString();
+            String nomeRec = jsonObject.get("nomeRec").getAsString();
+            String timeStamp = jsonObject.get("timeStamp").getAsString();
+            String contaBancoSender = jsonObject.get("contaBancoSender").getAsString();
+            String contaBancoRec = jsonObject.get("contaBancoRec").getAsString();
+            String valor = jsonObject.get("valor").getAsString();
+            String senhasender = jsonObject.get("senhaSender").getAsString();
+
+            for (Cliente cli : listaClientes) {
+                if (cli.getConta().equals(contaBancoSender)) {
+                    if (cli.getSenha().equals(senhasender)) {
+                        cli.sacar(Double.parseDouble(valor));
+                    } else {
+                        System.out.println("Senha Banco: " + cli.getSenha() + " Senha Req: " + senhasender);
+                    }
+                }
+                if (cli.getConta().equals(contaBancoRec)) {
+                    cli.depositar(Double.parseDouble(valor));
                 }
             }
-            if(cli.getConta().equals(contaBancoRec)) {
-                cli.depositar(Double.parseDouble(valor));
-            }
+            String[] res = { String.valueOf(idPagamento), timeStamp, nomeSender, nomeRec, String.valueOf(valor) };
+            manipulador.appendCSV(res);
         }
-        
-        String[] res = { String.valueOf(idPagamento), timeStamp, nomeSender, nomeRec, String.valueOf(valor) };
-        manipulador.appendCSV(res);
+
     }
 }

@@ -10,16 +10,19 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Client extends Thread {
+public class Client extends Thread{
     private Socket socket;
     private BufferedWriter writer;
-    private BufferedReader reader; // Added for receiving messages
+    private BufferedReader reader;
     private String serverAddress;
     private int serverPort;
-    private volatile boolean connected = false; // Flag to track connection status
-    private static final int MAX_RETRY_ATTEMPTS = 5; // Maximum number of connection retry attempts
-    private static final int RETRY_DELAY_MS = 1000; // Delay between retries in milliseconds
+    private volatile boolean connected = false;
+    private static final int MAX_RETRY_ATTEMPTS = 5;
+    private static final int RETRY_DELAY_MS = 1000;
+    private final AtomicBoolean listenerRunning = new AtomicBoolean(false);
+    private Thread listenerThread;
 
     public Client(String port) {
         this.serverAddress = "127.0.0.1";
@@ -27,22 +30,17 @@ public class Client extends Thread {
             this.serverPort = Integer.parseInt(port);
         } catch (NumberFormatException e) {
             System.err.println("Invalid port number format: " + port);
-            // Handle error appropriately, maybe throw exception or set default
-            this.serverPort = -1; // Indicate invalid port
+            this.serverPort = -1;
         }
     }
     
-    @Override
-    public void run() {
-        // Try to connect with retries
-        connectWithRetry();
-        startListening();
-    }
-    
-    // New method that implements connection retry logic
+    /**
+     * Attempts to connect to the server with retry logic
+     * @return true if connection was successful, false otherwise
+     */
     public boolean connectWithRetry() {
         if (connected) {
-            System.out.println("Already connected.");
+            System.out.println("Already connected to " + serverAddress + ":" + serverPort);
             return true;
         }
         
@@ -80,32 +78,31 @@ public class Client extends Thread {
         return success;
     }
     
-    // Connect method now handles stream initialization
+    /**
+     * Attempts to connect to the server once
+     * @return true if connection was successful, false otherwise
+     */
     public boolean connect() {
         if (connected) {
-            System.out.println("Already connected.");
+            System.out.println("Already connected to " + serverAddress + ":" + serverPort);
             return true;
         }
+        
         if (serverPort < 0 || serverPort > 65535) {
              System.err.println("Invalid port number: " + serverPort);
              return false;
         }
+        
         try {
             System.out.println("Attempting to connect to " + serverAddress + ":" + serverPort + "...");
             socket = new Socket();
-            // Use a reasonable timeout
-            socket.connect(new InetSocketAddress(serverAddress, serverPort), 5000); // 5-second timeout
+            socket.connect(new InetSocketAddress(serverAddress, serverPort), 5000);
             
-            // Initialize streams ONCE after successful connection
-            // Use UTF-8 encoding for consistency
             writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8)); // Initialize reader too
+            reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             
             connected = true;
-            System.out.println("Connection Successful!");
-            
-            // Optional: Start a separate thread to listen for incoming messages if needed
-            // startListening(); 
+            System.out.println("Connection Successful to " + serverAddress + ":" + serverPort);
             
             return true;
 
@@ -116,94 +113,155 @@ public class Client extends Thread {
         } catch (IOException e) {
             System.err.println("Connection failed to " + serverAddress + ":" + serverPort + ": " + e.getMessage());
         } catch (IllegalArgumentException e) {
-            System.err.println("Connection parameter error (e.g., port out of range): " + e.getMessage());
+            System.err.println("Connection parameter error: " + e.getMessage());
         }
-        // Ensure cleanup if connection failed partway
-        closeConnection(); 
+        
+        closeConnection();
         return false;
     }
 
-    // Send message method now uses the initialized writer and adds newline
+    /**
+     * Sends a message to the server
+     * @param msg The message to send
+     * @return true if message was sent successfully, false otherwise
+     */
     public boolean sendMessage(String msg) {
-        if (!connected || writer == null) {
+        if (!ensureConnected()) {
             System.err.println("Cannot send message: Not connected.");
             return false;
         }
+        
         try {
-            //System.out.println("Sending: " + msg);
-            writer.write(msg + "\n"); // *** Add newline character ***
-            writer.flush(); // Ensure data is sent immediately
+            writer.write(msg + "\n");
+            writer.flush();
             return true;
         } catch (IOException e) {
             System.err.println("Error sending message: " + e.getMessage());
-            // Consider the connection potentially broken
-            closeConnection(); 
+            closeConnection();
             return false;
         }
     }
     
-    // Optional: Method to read a message from the server
+    /**
+     * Ensures the client is connected before attempting operations
+     * Will try to reconnect if not connected
+     * @return true if connected (or reconnected), false otherwise
+     */
+    public boolean ensureConnected() {
+        if (connected && socket != null && !socket.isClosed()) {
+            return true;
+        }
+        
+        // Not connected, try to reconnect
+        System.out.println("Connection lost or not established. Attempting to reconnect...");
+        return connectWithRetry();
+    }
+    
+    /**
+     * Receives a message from the server
+     * @return The message received, or null if an error occurred
+     */
     public String receiveMessage() {
-        if (!connected || reader == null) {
+        if (!ensureConnected()) {
             System.err.println("Cannot receive message: Not connected.");
             return null;
         }
+        
         try {
-            return reader.readLine(); // Reads one line
+            return reader.readLine();
         } catch (SocketException e) {
-             System.err.println("Socket error while reading: " + e.getMessage() + " (Connection likely closed)");
+             System.err.println("Socket error while reading: " + e.getMessage());
              closeConnection();
              return null;
         } catch (IOException e) {
             System.err.println("Error receiving message: " + e.getMessage());
-            closeConnection(); 
+            closeConnection();
             return null;
         }
     }
 
-    // Optional: Method to continuously listen for messages in a background thread
+    /**
+     * Starts a background thread to listen for messages from the server
+     */
     public void startListening() {
-        if (!connected) return;
-        Thread listenerThread = new Thread(() -> {
-            System.out.println("Client listener started...");
-            while (connected) {
+        if (!ensureConnected()) {
+            System.err.println("Cannot start listener: Not connected.");
+            return;
+        }
+        
+        if (listenerRunning.get()) {
+            System.out.println("Listener already running.");
+            return;
+        }
+        
+        listenerThread = new Thread(() -> {
+            listenerRunning.set(true);
+            System.out.println("Client listener started for " + serverAddress + ":" + serverPort);
+            
+            while (connected && listenerRunning.get()) {
                 String message = receiveMessage();
                 if (message != null) {
-                    System.out.println("Received from server: " + message);
-                    // Process the received message here
+                    handleServerMessage(message);
                 } else {
-                    // readLine returned null, usually means end of stream/connection closed
                     System.out.println("Server disconnected or stream closed.");
-                    closeConnection(); // Ensure cleanup
-                    break; // Exit listener loop
+                    closeConnection();
+                    break;
                 }
             }
-            System.out.println("Client listener stopped.");
+            
+            listenerRunning.set(false);
+            System.out.println("Client listener stopped for " + serverAddress + ":" + serverPort);
         });
-        listenerThread.setDaemon(true); // Allow application to exit even if listener is running
+        
+        listenerThread.setDaemon(true);
         listenerThread.start();
     }
-    // Close connection method
+    
+    /**
+     * Handles messages received from the server
+     * Override this method in subclasses to provide custom handling
+     * @param message The message received from the server
+     */
+    protected void handleServerMessage(String message) {
+        System.out.println("Received from server: " + message);
+    }
+    
+    /**
+     * Closes the connection to the server
+     */
     public void closeConnection() {
         if (!connected) return;
-        connected = false; // Set flag immediately
-        System.out.println("Closing connection...");
+        
+        connected = false;
+        System.out.println("Closing connection to " + serverAddress + ":" + serverPort);
+        
         try {
-            // Close streams first (closing writer/reader often closes underlying stream)
             if (writer != null) writer.close();
             if (reader != null) reader.close();
             if (socket != null && !socket.isClosed()) socket.close();
-            System.out.println("Connection closed.");
+            System.out.println("Connection closed to " + serverAddress + ":" + serverPort);
         } catch (IOException e) {
             System.err.println("Error closing connection: " + e.getMessage());
         }
-        // Nullify references
+        
         writer = null;
         reader = null;
         socket = null;
+        
+        // Stop the listener thread if it's running
+        if (listenerRunning.get()) {
+            listenerRunning.set(false);
+            if (listenerThread != null) {
+                listenerThread.interrupt();
+            }
+        }
     }
 
+    /**
+     * Checks if the client is connected to the server
+     * @return true if connected, false otherwise
+     */
     public boolean isConnected() {
-        return connected;
+        return connected && socket != null && !socket.isClosed();
     }
 }

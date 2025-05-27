@@ -8,4 +8,3 @@ public class Car extends Auto {
         super(_on_off, _idAuto, _colorAuto, _driverID, _sumoExecutor, _acquisitionRate, 2, 2, 5.87, 5, 1, port);
     }
 }
-

@@ -41,7 +41,7 @@ mvn install:install-file -Dfile="./lib/sumo/libtraci-1.23.1-sources.jar" -Dgroup
 
 mvn install:install-file -Dfile="./lib/sumo/libsumo-1.23.1-sources.jar" -DgroupId="libsumo-1.23.1-sources" -DartifactId="libsumo-1.23.1-sources" -Dversion="libsumo-1.23.1-sources" -Dpackaging="jar" -DgeneratePom=true
 
-mvn install:install-file -Dfile="./lib/sumo/libtraci-1.23.1.jar" -DgroupId="libtraci-1.23.1" -DartifactId="libtraci-1.18.0" -Dversion="libtraci-1.23.1" -Dpackaging="jar" -DgeneratePom=true
+mvn install:install-file -Dfile="./lib/sumo/libtraci-1.23.1.jar" -DgroupId="libtraci-1.23.1" -DartifactId="libtraci-1.23.1" -Dversion="libtraci-1.23.1" -Dpackaging="jar" -DgeneratePom=true
 
 mvn install:install-file -Dfile="./lib/sumo/lisum-core.jar" -DgroupId="lisum-core" -DartifactId="lisum-core" -Dversion="lisum-core" -Dpackaging="jar" -DgeneratePom=true
 
@@ -54,11 +54,17 @@ mvn install:install-file -Dfile="./lib/sumo/gson-2.13.1.jar" -DgroupId="com.goog
 
 mvn clean install
 
+# Passo 9 - Regras de firewall
+
+Lembre de abrir as portas 12347 e 12346 (TCP e UDP) do seu firewall para prermitir comunicação do APP
 # Passo 9 - Executar o programa
 
 Reinicie o VS Code e execute o App.java (em src/main/java/io/sim)
 
-# gerar mapa
+
+# Comandos Auxiliares
+
+## Gerar mapa
 
    netconvert --osm-files map.osm -o map.net.xml
    polyconvert --net-file map.net.xml --osm-files map.osm --type-file typemap.xml -o map.poly.xml

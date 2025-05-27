@@ -1,14 +1,32 @@
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Client.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\AlphaBank.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Company.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\TransportService.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Car.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\ReportsController.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\App.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Servidor.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\ManipuladorCSV.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Rota.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Auto.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Driver.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\EnvSimulator.java
-C:\Users\João vitor\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Codec.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetVehicleCO2EmissionCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Company.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetVehicleIDListCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetTimeCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetVehicleSpeedCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\ManipuladorCSV.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetVehicleRouteIDCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetVehicleDistanceCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetVehicleFuelConsumptionCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\SumoCommandExecutor.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\App.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\AlphaBank.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetArrivedNumberCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\DoTimestepCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Codec.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Driver.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetVehiclePositionCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\FuelStation.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\GetArrivedIDListCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Rota.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\TransportService.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Servidor.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\AddVehicleFullCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\AddRouteCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Client.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Car.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\EnvSimulator.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\SetVehicleColorCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\SetVehicleSpeedCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\SumoCommand.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\Auto.java
+C:\Users\jvsb2\Documents\reps\avancada\sumosimulator\src\main\java\io\sim\sumo\cmd\SetVehicleSpeedModeCommand.java

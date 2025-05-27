@@ -34,6 +34,8 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class Company extends Thread {
     private double valorFinal = 347.47;
@@ -56,6 +58,8 @@ public class Company extends Thread {
     private static ServerSocket server;
     private boolean simulationComplete = false;
     private long lastActivityTime = 0;
+    private double valorKM = 3.25;
+    
     private static final long INACTIVITY_TIMEOUT = 10000; // 10 seconds of inactivity before considering simulation complete
 
     public class CompanyServer extends Servidor {
@@ -65,13 +69,26 @@ public class Company extends Thread {
 
         @Override
         protected void handleClientMessage(Socket clientSocket, String message, BufferedWriter writer) {
+            System.out.println("Message received from cli!! " + message);
+            JsonObject jsonObject = JsonParser.parseString(message).getAsJsonObject();
+            String comando = jsonObject.get("comando").getAsString();
+            if (comando.equals("pagar")) {
+                String driverID = jsonObject.get("driverID").getAsString();
+                String timeStamp = jsonObject.get("timeStamp").getAsString();
+                Double valorLitros = Double.parseDouble(jsonObject.get("valorLitros").getAsString());
+                Driver funcBuscado = null;
+                for (Driver funcionario : funcionarios) {
+                    if (funcionario.getDriverId().equals(driverID)) {
+                        funcBuscado = funcionario;
+                    }
+                }
+                bot.cobrar(Double.parseDouble(timeStamp), funcBuscado.getDriverId(), funcBuscado.getNome(),funcBuscado.getConta() , valorLitros * valorKM, funcBuscado.getSenhaBanco());
+            }
         }
-
     }
 
     private class BotPayment extends Client {
-        private double valorKM = 3.25;
-        private ManipuladorCSV csvBanco;
+        private ManipuladorCSV csvBot;
         private int numPagamentos;
 
         public class Relatorio {
@@ -83,10 +100,12 @@ public class Company extends Thread {
             private String contaBancoSender;
             private Double valor;
             private String senhaSender;
+            private String comando;
 
-            public Relatorio(int idPagamento, Double timeStamp, String nomeSender, String nomeRec, String contaBancoRec,
-                    String contaBancoSender,
+            public Relatorio(String comando, int idPagamento, Double timeStamp, String nomeSender, String nomeRec,
+                    String contaBancoRec, String contaBancoSender,
                     Double valor, String senhaSender) {
+                this.comando = comando;
                 this.idPagamento = idPagamento;
                 this.timeStamp = timeStamp;
                 this.nomeRec = nomeRec;
@@ -100,18 +119,22 @@ public class Company extends Thread {
 
         public BotPayment(String porta) {
             super(porta);
-            csvBanco = new ManipuladorCSV("reports/company.csv");
-            csvBanco.delete();
+            csvBot = new ManipuladorCSV("reports/company.csv");
+            csvBot.delete();
             String[] cabecalho = { "ID Pagamento", "TimeStamp", "ID Motorista", "Nome Motorista", "Valor" };
-            csvBanco.writeCSV(cabecalho);
+            csvBot.writeCSV(cabecalho);
             numPagamentos = 0;
+            
+            // Establish connection immediately
+            connectWithRetry();
         }
 
         public void pagar(Double timeStamp, String idDriver, String driver, String contaBancoDriver, Double valor,
                 String senha) {
             Relatorio rel;
             try {
-                rel = new Relatorio(numPagamentos, timeStamp, "Company", driver, contaBancoDriver, contaCompany, valor,
+                rel = new Relatorio("pagar", numPagamentos, timeStamp, "Company", driver, contaBancoDriver,
+                        contaCompany, valor,
                         Codec.toHexString(Codec.getSHA(senha)));
 
                 var gson = new Gson();
@@ -124,11 +147,30 @@ public class Company extends Thread {
                 e.printStackTrace();
             }
         }
+        
+        public void cobrar(Double timeStamp, String idDriver, String driver, String contaBancoDriver, Double valor,
+                String senha) {
+            Relatorio rel;
+            try {
+                rel = new Relatorio("pagar", numPagamentos, timeStamp, driver, "Fuel Station", "1551363287",
+                        contaBancoDriver, valor,
+                        Codec.toHexString(Codec.getSHA(senha)));
+
+                var gson = new Gson();
+
+                String msg = gson.toJson(rel);
+                numPagamentos++;
+                sendMessage(msg);
+                ralatarPagamento(timeStamp, driver, idDriver, -valor);
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+        }
 
         public void ralatarPagamento(Double timeStamp, String driver, String idDriver, Double quantia) {
             String[] info = { String.valueOf(numPagamentos), String.valueOf(timeStamp), driver, idDriver,
                     String.valueOf(quantia) };
-            csvBanco.appendCSV(info);
+            csvBot.appendCSV(info);
         }
     }
 
@@ -213,40 +255,53 @@ public class Company extends Thread {
         rotasEmExecucao = Collections.synchronizedCollection(new ArrayList<Rota>());
         rotasExecutadas = Collections.synchronizedCollection(new ArrayList<Rota>());
         this.servicos = Collections.synchronizedCollection(new ArrayList<TransportService>());
+        
         bot = new BotPayment("12346");
-        bot.start();
+        // Start the bot in a separate thread
+        Thread botThread = new Thread(() -> {
+            bot.startListening();
+        });
+        botThread.setDaemon(true);
+        botThread.start();
+        
         senha = "079816";
         for (int i = 0; i < carros.size(); i++) {
             Rota rota = new Rota("data/dados.xml", carros.get(i).getIdAuto());
             rotasAguardando.add(rota);
             servicos.add(new TransportService(true, carros.get(i).getIdAuto(), rota, carros.get(i), this.sumoExecutor));
         }
-        
+
         // Initialize the last activity time
         updateActivityTimestamp();
     }
 
     @Override
     public void run() {
-        System.out.println("Company thread started with " + funcionarios.size() + " drivers and " + 
-                           carros.size() + " cars.");
-        
+        System.out.println("Company thread started with " + funcionarios.size() + " drivers and " +
+                carros.size() + " cars.");
+
         // Start driver threads
         for (Driver funcs : funcionarios) {
             funcs.start();
-            try { Thread.sleep(10); } catch (InterruptedException e) { }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+            }
         }
-        
+
         // Start transport service threads
         for (TransportService service : servicos) {
             service.start();
             rotasEmExecucao.add(service.getRota());
             rotasAguardando.remove(service.getRota());
-            try { Thread.sleep(10); } catch (InterruptedException e) { }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+            }
         }
-        
+
         System.out.println("All drivers and transport services started. Beginning simulation loop.");
-        
+
         // Main simulation loop
         while (this.on_off) {
             try {
@@ -259,25 +314,25 @@ public class Company extends Thread {
                     this.on_off = false;
                     break;
                 }
-                
+
                 // Process any vehicles that have completed their routes
                 boolean hadActivity = removeCorridasFinalizadas();
-                
+
                 // Update activity timestamp if we had any activity
                 if (hadActivity) {
                     updateActivityTimestamp();
                     simulationComplete = false;
                 }
-                
+
                 // Check if simulation should continue
                 checkSimulationStatus();
-                
+
             } catch (Exception e) {
                 System.err.println("Error in Company main loop: " + e.getMessage());
                 e.printStackTrace();
                 // Don't exit on error, just continue the loop
             }
-            
+
             try {
                 Thread.sleep(50); // Short sleep to prevent CPU hogging
             } catch (InterruptedException e) {
@@ -286,14 +341,14 @@ public class Company extends Thread {
                 Thread.currentThread().interrupt();
             }
         }
-        
+
         System.out.println("Company thread ending. Simulation complete.");
     }
 
     private void updateActivityTimestamp() {
         lastActivityTime = System.currentTimeMillis();
     }
-    
+
     private void checkSimulationStatus() {
         // Check if all routes are complete
         if (rotasEmExecucao.isEmpty() && !rotasExecutadas.isEmpty()) {
@@ -356,11 +411,6 @@ public class Company extends Thread {
         return on_off;
     }
 
-    // This method was causing premature termination - removed and replaced with more robust logic
-    // public boolean getHaveCar() {
-    //     return arrived <= carros.size();
-    // }
-
     /**
      * Process vehicles that have completed their routes.
      * @return true if any vehicles were processed, false otherwise
@@ -381,78 +431,45 @@ public class Company extends Thread {
             int arrivedNum = arrivedNumFuture.get();
             arrived += arrivedNum;
             
-            System.out.println("Vehicles arrived this step: " + arrivedIDs.size() + " (Total arrived: " + arrived + ")");
+            System.out.println("Vehicles arrived: " + arrivedNum + ", Total arrived: " + arrived);
             hadActivity = true;
-
-            List<Rota> rotasParaRemover = new ArrayList<>();
-
-            synchronized (rotasEmExecucao) {
-                for (String arrivedID : arrivedIDs) {
-                    Rota rotaEncontrada = null;
-                    TransportService servicoAssociado = null;
-
-                    for (Rota rota : rotasEmExecucao) {
-                        if (rota.getIDRota().equals(arrivedID)) {
-                            rotaEncontrada = rota;
-                            break;
-                        }
-                    }
-
-                    if (rotaEncontrada != null) {
-                        rotasParaRemover.add(rotaEncontrada);
-                        for (TransportService servico : servicos) {
-                            if (servico.getIdTransportService().equals(arrivedID)) {
-                                servicoAssociado = servico;
-                                break;
-                            }
-                        }
-
-                        if (servicoAssociado != null) {
-                            Car carro = servicoAssociado.getAuto();
-                            if (carro != null) {
-                                System.out.println("Processing arrival for car: " + carro.getIdAuto());
-                                carro.setOn_off(false); 
-                                carro.interrupt(); 
-                                pagar(carro.getDriverId(), valorFinal); 
-                            } else {
-                                System.err.println("Error: Service " + arrivedID + " has no associated car.");
-                            }
-                        } else {
-                            System.err.println("Error: Arrived route " + arrivedID + " has no associated service.");
-                        }
-                    } else {
-                        System.err.println(
-                                "Warning: Arrived vehicle ID " + arrivedID + " not found in executing routes.");
+            
+            // Process each arrived vehicle
+            for (String arrivedID : arrivedIDs) {
+                System.out.println("Processing arrived vehicle: " + arrivedID);
+                
+                // Find the corresponding transport service
+                TransportService serviceToRemove = null;
+                for (TransportService service : servicos) {
+                    if (service.getAuto().getIdAuto().equals(arrivedID)) {
+                        serviceToRemove = service;
+                        break;
                     }
                 }
-
-                if (!rotasParaRemover.isEmpty()) {
-                    rotasEmExecucao.removeAll(rotasParaRemover);
-                    rotasExecutadas.addAll(rotasParaRemover);
-                    System.out.println("Removed " + rotasParaRemover.size() + " routes. Executing: "
-                            + rotasEmExecucao.size() + ", Finished: " + rotasExecutadas.size());
+                
+                if (serviceToRemove != null) {
+                    // Move the route from executing to executed
+                    rotasEmExecucao.remove(serviceToRemove.getRota());
+                    rotasExecutadas.add(serviceToRemove.getRota());
+                    
+                    // Shutdown the service
+                    serviceToRemove.shutdown();
+                    
+                    // Make payment for the completed route
+                    pagar(serviceToRemove.getAuto().getDriverId(), valorFinal);
+                    
+                    System.out.println("Vehicle " + arrivedID + " completed route. Paid driver " + 
+                                      serviceToRemove.getAuto().getDriverId());
+                } else {
+                    System.out.println("Could not find transport service for arrived vehicle: " + arrivedID);
                 }
             }
-
-        } catch (ExecutionException e) {
-            System.err.println("Error getting SUMO arrival data: " + e.getCause());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            System.err.println("Interrupted while waiting for SUMO arrival data.");
+            
         } catch (Exception e) {
-            System.err.println("Unexpected error in removeCorridasFinalizadas: " + e.getMessage());
+            System.err.println("Error processing arrived vehicles: " + e.getMessage());
             e.printStackTrace();
         }
         
         return hadActivity;
-    }
-    
-    /**
-     * Shutdown method for Company
-     */
-    public void shutdown() {
-        System.out.println("Company shutdown requested.");
-        this.on_off = false; // Signal main loop to stop
-        this.interrupt(); // Interrupt if sleeping or waiting in loop
     }
 }

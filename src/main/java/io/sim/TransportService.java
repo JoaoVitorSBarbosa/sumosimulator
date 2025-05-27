@@ -14,9 +14,10 @@ public class TransportService extends Thread {
     private String idTransportService;
     private volatile boolean on_off;
     private SumoCommandExecutor sumoExecutor;
-    private Car auto;
+    private Auto auto;
     private Rota rota;
     private volatile boolean initialized = false;
+    private Thread serviceThread;
 
     public TransportService(boolean _on_off, String _idTransportService, Rota _rota, Car _auto,
                             SumoCommandExecutor _sumoExecutor) {
@@ -27,6 +28,11 @@ public class TransportService extends Thread {
         this.sumoExecutor = _sumoExecutor;
     }
 
+    public void start() {
+        serviceThread = new Thread(this);
+        serviceThread.start();
+    }
+
     @Override
     public void run() {
         try {
@@ -34,7 +40,9 @@ public class TransportService extends Thread {
             boolean success = initFuture.get(); 
             if (success) {
                 initialized = true;
-                this.auto.start();
+                // Create and start a thread for the Auto instance
+                Thread autoThread = new Thread(this.auto);
+                autoThread.start();
             } else {
                 this.on_off = false; 
             }
@@ -117,11 +125,12 @@ public class TransportService extends Thread {
     public void shutdown() {
         System.out.println("Shutdown requested for TransportService: " + idTransportService);
         this.on_off = false;
-        if (auto != null && auto.isAlive()) {
+        if (auto != null) {
             auto.setOn_off(false); 
-            auto.interrupt();      
         }
-        this.interrupt(); 
+        if (serviceThread != null) {
+            serviceThread.interrupt();
+        }
     }
 
     public boolean isOn_off() {
@@ -136,7 +145,7 @@ public class TransportService extends Thread {
         return this.idTransportService;
     }
 
-    public Car getAuto() {
+    public Auto getAuto() {
         return this.auto;
     }
 
