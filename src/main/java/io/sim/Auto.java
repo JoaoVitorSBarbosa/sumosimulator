@@ -1,18 +1,21 @@
 package io.sim;
 
-import de.tudresden.sumo.cmd.Simulation;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import io.sim.sumo.cmd.*;
+
 import de.tudresden.sumo.objects.SumoColor;
 import de.tudresden.sumo.objects.SumoPosition2D;
-import it.polito.appeal.traci.SumoTraciConnection;
-import de.tudresden.sumo.cmd.Vehicle;
+import de.tudresden.sumo.objects.SumoStringList;
+import io.sim.sumo.SumoCommandExecutor;
 
-public class Auto extends Thread {
-
+public class Auto extends Client {
+	private double valorMaxTanque = 50.0;
 	private String idAuto;
 	private SumoColor colorAuto;
 	private String driverID;
-	private SumoTraciConnection sumo;
-
+	private SumoCommandExecutor sumoExecutor;
+	private Double lastTimeStep;
 	private boolean on_off;
 	private long acquisitionRate;
 	private int fuelType; // 1-diesel, 2-gasoline, 3-ethanol, 4-hybrid
@@ -22,26 +25,30 @@ public class Auto extends Thread {
 	private int personNumber; // the total number of persons which are riding in this vehicle
 
 	private double tanque;
+	ManipuladorCSV manipulador;
 
-	public Auto(boolean _on_off, String _idAuto, SumoColor _colorAuto, String _driverID, SumoTraciConnection _sumo,
+	public Auto(boolean _on_off, String _idAuto, SumoColor _colorAuto, String _driverID,
+			SumoCommandExecutor _sumoExecutor,
 			long _acquisitionRate,
-			int _fuelType, int _fuelPreferential, double _fuelPrice, int _personCapacity, int _personNumber) {
+			int _fuelType, int _fuelPreferential, double _fuelPrice, int _personCapacity, int _personNumber,
+			String port) {
 
+		super(port);
 		this.on_off = _on_off;
 		this.idAuto = _idAuto;
 		this.colorAuto = _colorAuto;
 		this.driverID = _driverID;
-		this.sumo = _sumo;
+		this.sumoExecutor = _sumoExecutor;
 		this.acquisitionRate = _acquisitionRate;
-		this.tanque = 10;
+		this.tanque = valorMaxTanque;
 
-		if ((_fuelType < 0) || (_fuelType > 4)) {
+		if ((_fuelType < 1) || (_fuelType > 4)) {
 			this.fuelType = 4;
 		} else {
 			this.fuelType = _fuelType;
 		}
 
-		if ((_fuelPreferential < 0) || (_fuelPreferential > 4)) {
+		if ((_fuelPreferential < 1) || (_fuelPreferential > 4)) {
 			this.fuelPreferential = 4;
 		} else {
 			this.fuelPreferential = _fuelPreferential;
@@ -50,81 +57,110 @@ public class Auto extends Thread {
 		this.fuelPrice = _fuelPrice;
 		this.personCapacity = _personCapacity;
 		this.personNumber = _personNumber;
+		this.lastTimeStep = 0.0;
+
+		manipulador = new ManipuladorCSV("reports/cars/" + idAuto + ".csv");
+		String[] cabecalho = { "Timestamp", "ID Car", "ID Route", "Speed", "Distance", "FuelConsumption", "CO2Emission",
+				"longitude(lon)", "latitude(lat)", "Tanque" };
+		manipulador.writeCSV(cabecalho);
 	}
 
 	@Override
 	public void run() {
-		try {
-			while (this.on_off) {
-				Auto.sleep(acquisitionRate);
+		System.out.println("Auto thread started for: " + idAuto);
+		while (this.on_off && !Thread.currentThread().isInterrupted()) {
+			try {
+				long sleepTime = acquisitionRate > 0 ? acquisitionRate : 100;
+				Thread.sleep(sleepTime);
+
+
+				if (!isVehicleInSimulation()) {
+					this.on_off = false;
+					break;
+				}
 
 				this.atualizaSensores();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 
-	private boolean hasArrived() {
-		boolean arrived = true;
-		try {
-			
-			String[] listaStrings;
-			String corridasFinalizadas = String.valueOf(sumo.do_job_get(Vehicle.getIDList()));
-			System.out.println(corridasFinalizadas);
-			if (!corridasFinalizadas.equals("[]")) {
-				corridasFinalizadas = corridasFinalizadas.substring(0, corridasFinalizadas.length() - 1);
-				corridasFinalizadas = corridasFinalizadas.substring(1, corridasFinalizadas.length());
-
-				listaStrings = corridasFinalizadas.split(",");
-
-				for (String s : listaStrings) {
-					if (s.equals(idAuto)) {
-						arrived = false;
-					}
-				}
-
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return arrived;
-	}
-
-	private void atualizaSensores() {
-
-		if (!Thread.currentThread().isInterrupted()) {
-			try {
-				if (!this.getSumo().isClosed()) {
-					if (!hasArrived()) {
-						SumoPosition2D sumoPosition2D;
-						decrementarTanque(
-								Double.parseDouble(
-										String.valueOf(sumo.do_job_get(Vehicle.getFuelConsumption(this.idAuto)))));
-						sumoPosition2D = (SumoPosition2D) sumo.do_job_get(Vehicle.getPosition(this.idAuto));
-						String[] dados = {
-								String.valueOf(sumo.do_job_get(Simulation.getCurrentTime())),
-								String.valueOf(this.idAuto),
-								String.valueOf(this.sumo.do_job_get(Vehicle.getRouteID(this.idAuto))),
-								String.valueOf(sumo.do_job_get(Vehicle.getSpeed(this.idAuto))),
-								String.valueOf(sumo.do_job_get(Vehicle.getDistance(this.idAuto))),
-								String.valueOf(sumo.do_job_get(Vehicle.getFuelConsumption(this.idAuto))),
-								String.valueOf(sumo.do_job_get(Vehicle.getCO2Emission(this.idAuto))),
-								String.valueOf(sumoPosition2D.x),
-								String.valueOf(sumoPosition2D.y) };
-
-						ReportsController.getArquivoCars().appendCSV(dados);
-
-						sumo.do_job_set(Vehicle.setSpeedMode(this.idAuto, 0));
-						sumo.do_job_set(Vehicle.setSpeed(this.idAuto, 10));
-					}
-				}
+			} catch (InterruptedException e) {
+				this.on_off = false;
+				Thread.currentThread().interrupt();
 			} catch (Exception e) {
 				e.printStackTrace();
+				this.on_off = false; 
 			}
-
 		}
+	}
 
+
+	private boolean isVehicleInSimulation() throws InterruptedException, ExecutionException {
+		CompletableFuture<SumoStringList> idListFuture = sumoExecutor.submitCommand(new GetVehicleIDListCommand());
+		SumoStringList idList = idListFuture.get();
+		return idList != null && idList.contains(this.idAuto);
+	}
+
+
+
+	private void atualizaSensores() {
+		try {
+			CompletableFuture<Double> timeFuture = sumoExecutor.submitCommand(new GetTimeCommand());
+			CompletableFuture<Double> fuelConsumptionFuture = sumoExecutor
+					.submitCommand(new GetVehicleFuelConsumptionCommand(this.idAuto));
+			CompletableFuture<SumoPosition2D> positionFuture = sumoExecutor
+					.submitCommand(new GetVehiclePositionCommand(this.idAuto));
+			CompletableFuture<String> routeIDFuture = sumoExecutor
+					.submitCommand(new GetVehicleRouteIDCommand(this.idAuto));
+			CompletableFuture<Double> speedFuture = sumoExecutor.submitCommand(new GetVehicleSpeedCommand(this.idAuto));
+			CompletableFuture<Double> distanceFuture = sumoExecutor
+					.submitCommand(new GetVehicleDistanceCommand(this.idAuto));
+			CompletableFuture<Double> co2EmissionFuture = sumoExecutor
+					.submitCommand(new GetVehicleCO2EmissionCommand(this.idAuto));
+
+
+			CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+					timeFuture, fuelConsumptionFuture, positionFuture,
+					routeIDFuture, speedFuture, distanceFuture, co2EmissionFuture);
+
+
+			allFutures.get();
+
+			Double currentTime = timeFuture.get();
+			Double fuelConsumption = fuelConsumptionFuture.get();
+			SumoPosition2D sumoPosition2D = positionFuture.get();
+			String routeID = routeIDFuture.get();
+			Double speed = speedFuture.get();
+			Double distance = distanceFuture.get();
+			Double co2Emission = co2EmissionFuture.get();
+
+			decrementarTanque(fuelConsumption, currentTime);
+
+			String[] dados = {
+					String.valueOf(currentTime),
+					this.idAuto,
+					routeID,
+					String.valueOf(speed),
+					String.valueOf(distance),
+					String.valueOf(fuelConsumption),
+					String.valueOf(co2Emission),
+					String.valueOf(sumoPosition2D.x),
+					String.valueOf(sumoPosition2D.y),
+					String.format("%.4f", tanque)
+			};
+
+			manipulador.appendCSV(dados);
+
+			sumoExecutor.submitCommand(new SetVehicleSpeedModeCommand(this.idAuto, 0));
+			sumoExecutor.submitCommand(new SetVehicleSpeedCommand(this.idAuto, 10)); // Example fixed speed
+
+		} catch (ExecutionException e) {
+
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			this.on_off = false; 
+		} catch (Exception e) {
+			e.printStackTrace();
+			this.on_off = false;
+		}
 	}
 
 	public boolean isOn_off() {
@@ -145,10 +181,6 @@ public class Auto extends Thread {
 
 	public String getIdAuto() {
 		return this.idAuto;
-	}
-
-	public SumoTraciConnection getSumo() {
-		return this.sumo;
 	}
 
 	public int getFuelType() {
@@ -199,16 +231,51 @@ public class Auto extends Thread {
 		return driverID;
 	}
 
-	public void decrementarTanque(double valor) {
-		tanque = tanque - valor;
-	}
+	public void decrementarTanque(double valor, double stepAtual) { // valor é em mg/s;
+		try {
+			Double tempo = stepAtual - lastTimeStep; // segundos
+			Double densidade = 750.0; // g/L
+			Double massa = tempo * valor; // mg
+			// massa = massa / 1000; //g
+			Double volume = massa / densidade;
 
-	public void incrementarTanque(double valor) {
-		tanque = tanque + valor;
+			tanque = tanque - volume;
+			if (tanque <= 0) {
+				tanque = 0;
+			}
+			System.out.println("At: " + stepAtual + " Ant: " + lastTimeStep + " Tanque: " + String.valueOf(tanque)
+					+ " Volume: " + String.valueOf(volume));
+			lastTimeStep = stepAtual;
+
+			if (precisaAbastecer()) {
+				abastecer();
+			}
+		} catch (NumberFormatException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 	}
 
 	public Boolean precisaAbastecer() {
 		return tanque < 3;
 	}
 
+	public void abastecer() {
+
+		try {
+			CompletableFuture<Void> stopFuture = sumoExecutor.submitCommand(new SetVehicleSpeedCommand(idAuto, 0.0));
+			stopFuture.get();
+			Thread.sleep(2000);
+			tanque = valorMaxTanque;
+			CompletableFuture<Void> resumeFuture = sumoExecutor.submitCommand(new SetVehicleSpeedCommand(idAuto, 10.0));
+			resumeFuture.get();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
+
+	}
 }

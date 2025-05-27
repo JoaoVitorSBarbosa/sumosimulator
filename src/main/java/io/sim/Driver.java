@@ -1,26 +1,19 @@
 package io.sim;
 
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-
-public class Driver extends Thread {
-    private int conta;
+public class Driver extends Client {
+    private String conta;
     private String id;
     private String nome;
     private String senhaBanco;
 
-    public Driver(String id, String nome) {
+    public Driver(String id, String nome, String senha, String conta, String porta) {
+        super(porta);
         this.id = id;
         this.nome = nome;
-        conta = 0;
-        senhaBanco = "";
-    }
-    public void setConta(int conta) {
         this.conta = conta;
+        this.senhaBanco = senha;
     }
-    public int getConta() {
+    public String getConta() {
         return conta;
     }
     public String getNome() {
@@ -28,9 +21,6 @@ public class Driver extends Thread {
     }
     public String getDriverId() {
         return id;
-    }
-    public void setSenhaBanco(String senha) {
-        senhaBanco = senha;
     }
     public String getSenhaBanco() {
         return senhaBanco;

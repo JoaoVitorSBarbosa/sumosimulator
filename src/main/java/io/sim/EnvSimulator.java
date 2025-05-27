@@ -1,36 +1,26 @@
 package io.sim;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.net.ServerSocket;
-import java.net.Socket;
-
 
 import it.polito.appeal.traci.SumoTraciConnection;
-import java.util.ArrayList;
 
-import de.tudresden.sumo.cmd.Simulation;
+import io.sim.sumo.SumoCommandExecutor;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+
 import java.io.IOException;
 
-public class EnvSimulator extends Thread{
+public class EnvSimulator extends Thread {
 	private Company company;
-	private ArrayList<Rota> listaRotas;
-    private SumoTraciConnection sumo;
+	private SumoTraciConnection sumo;
 	private AlphaBank banco;
-	private static ServerSocket server;
+	private boolean isOn;
+	private SumoCommandExecutor sumoExecutor;
 
-    public EnvSimulator() {
-		
-    }
+	public EnvSimulator() {
+		isOn = true;
+	}
 
-    public void run(){
-		String sumo_bin = "sumo-gui";		
+	public void run() {
+		String sumo_bin = "sumo-gui";
 		String config_file = "map/map.sumo.cfg";
 
 		// Sumo connection
@@ -40,20 +30,25 @@ public class EnvSimulator extends Thread{
 
 		try {
 			sumo.runServer(12345);
+			this.sumoExecutor = new SumoCommandExecutor(this.sumo);
+            this.sumoExecutor.start();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		company = new Company(sumo);
+		banco = new AlphaBank();
+		banco.start();
+		company = new Company(this.sumoExecutor);
 		company.start();
 
-		banco = new AlphaBank();
-		
-		if(!company.getOnOff()) {
-			if(!sumo.isClosed()) {
-				sumo.close(); //Fecha o sumo se acabou os carros
+		while (isOn) {
+
+			if (!company.getOnOff()) {
+				if (!sumo.isClosed()) {
+					sumo.close(); // Fecha o sumo se acabou os carros
+					isOn = false;
+				}
 			}
 		}
-    }
-	
+	}
 
 }

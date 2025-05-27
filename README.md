@@ -49,7 +49,7 @@ mvn install:install-file -Dfile="./lib/sumo/lisum-gui.jar" -DgroupId="lisum-gui"
 
 mvn install:install-file -Dfile="./lib/sumo/TraaS.jar" -DgroupId="TraaS" -DartifactId="TraaS" -Dversion="TraaS" -Dpackaging="jar" -DgeneratePom=true
 
-mvn install:install-file -Dfile="./lib/sumo/gson-2.13.1.jar" -DgroupId="GSON" -DartifactId="TraaS" -Dversion="GSON" -Dpackaging="jar" -DgeneratePom=true
+mvn install:install-file -Dfile="./lib/sumo/gson-2.13.1.jar" -DgroupId="com.google.code.gson" -DartifactId="gson" -Dversion="2.13.1" -Dpackaging="jar" -DgeneratePom=true
 
 
 mvn clean install
