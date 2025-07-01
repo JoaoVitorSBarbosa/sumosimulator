@@ -1,0 +1,12 @@
+Metric,Value,Unit,Description
+Route_Length,29,00,km,Comprimento total da rota
+Simulation_Time,1305,0,seconds,Tempo total de simulação
+Mean_Speed,31,87,km/h,Velocidade média medida
+Standard_Deviation,11,36,km/h,Desvio padrão das velocidades
+Precision,73,72,percent,Precisão da reconciliação
+Uncertainty,11,36,km/h,Incerteza dos dados
+Total_Tasks,10,tasks,Total de tarefas analisadas
+Schedulable_Tasks,3,tasks,Tarefas escalonáveis
+Processors,1,units,Número de processadores
+Total_Utilization,1,88,ratio,Utilização total do sistema
+Utilization_Percentage,188,40,percent,Percentual de utilização

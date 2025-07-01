@@ -1,0 +1,6 @@
+Component,Status,Details,Value,Unit
+Data_Reconciliation,COMPLETED,Sensor_Readings,573,readings
+Data_Reconciliation,COMPLETED,Mean_Speed,31,87,km/h
+Real_Time_Scheduling,COMPLETED,Schedulable_Tasks,3,tasks
+Real_Time_Scheduling,COMPLETED,System_Utilization,188,40,percent
+Graphs_Generated,COMPLETED,Specific_Charts,3,files

@@ -215,7 +215,7 @@ public class Company extends Thread {
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
-            Document doc = builder.parse("data/dados.xml");
+            Document doc = builder.parse("data/dadosAV2.xml");
             NodeList nList = doc.getElementsByTagName("vehicle");
 
             for (int i = 0; i < nList.getLength(); i++) {
@@ -266,7 +266,7 @@ public class Company extends Thread {
         
         senha = "079816";
         for (int i = 0; i < carros.size(); i++) {
-            Rota rota = new Rota("data/dados.xml", carros.get(i).getIdAuto());
+            Rota rota = new Rota("data/dadosAV2.xml", carros.get(i).getIdAuto());
             rotasAguardando.add(rota);
             servicos.add(new TransportService(true, carros.get(i).getIdAuto(), rota, carros.get(i), this.sumoExecutor));
         }
