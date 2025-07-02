@@ -1,6 +1,5 @@
 package io.sim;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
@@ -11,6 +10,7 @@ import java.util.List;
 
 /**
  * Classe responsável pela geração dos 3 gráficos específicos
+ * Modificada para mostrar estatísticas por sensor baseadas nas 10 medições
  */
 public class GraphGenerator {
     
@@ -25,6 +25,20 @@ public class GraphGenerator {
     private static final Color OPTIMAL_SPEED_COLOR = new Color(92, 184, 92);    // Verde
     private static final Color REAL_SPEED_COLOR = new Color(51, 122, 183);      // Azul
     private static final Color MEASURED_SPEED_COLOR = new Color(217, 83, 79);   // Vermelho
+    
+    // Cores para diferentes sensores
+    private static final Color[] SENSOR_COLORS = {
+        new Color(51, 122, 183),   // Azul
+        new Color(217, 83, 79),    // Vermelho
+        new Color(92, 184, 92),    // Verde
+        new Color(240, 173, 78),   // Laranja
+        new Color(156, 39, 176),   // Roxo
+        new Color(23, 162, 184),   // Ciano
+        new Color(108, 117, 125),  // Cinza
+        new Color(220, 53, 69),    // Vermelho escuro
+        new Color(40, 167, 69),    // Verde escuro
+        new Color(255, 193, 7)     // Amarelo
+    };
     
     private String outputDirectory;
     
@@ -72,26 +86,30 @@ public class GraphGenerator {
         List<DataReconciliation.SensorReading> readings = dataReconciliation.getSensorReadings();
         
         if (readings.isEmpty()) {
-            drawNoDataMessage(g2d, "Nenhum dado disponível para velocidades ótimas");
+            drawNoDataMessage(g2d, "Nenhum dado disponivel para velocidades otimas");
             saveImage(image, outputDirectory + "/1_velocidades_otimas.png");
             g2d.dispose();
             return;
         }
         
         // Preparar dados
-        List<Double> timestamps = new ArrayList<>();
+        List<Double> distances = new ArrayList<>();
         List<Double> realSpeeds = new ArrayList<>();
         List<Double> optimalSpeeds = new ArrayList<>();
         
+        // Usar distância como eixo X em vez de tempo
         for (DataReconciliation.SensorReading reading : readings) {
-            timestamps.add(reading.getTimestamp());
-            realSpeeds.add(reading.getRealSpeed());
-            optimalSpeeds.add(reading.getOptimalSpeed());
+            // Pegar apenas a última execução para o gráfico de velocidades ótimas
+            if (reading.getRunNumber() == 10) {
+                distances.add(reading.getDistance());
+                realSpeeds.add(reading.getRealSpeed());
+                optimalSpeeds.add(reading.getOptimalSpeed());
+            }
         }
         
         // Encontrar valores mínimos e máximos
-        double minTime = timestamps.stream().mapToDouble(Double::doubleValue).min().orElse(0);
-        double maxTime = timestamps.stream().mapToDouble(Double::doubleValue).max().orElse(1);
+        double minDist = distances.stream().mapToDouble(Double::doubleValue).min().orElse(0);
+        double maxDist = distances.stream().mapToDouble(Double::doubleValue).max().orElse(1);
         double minSpeed = Math.min(
             realSpeeds.stream().mapToDouble(Double::doubleValue).min().orElse(0),
             optimalSpeeds.stream().mapToDouble(Double::doubleValue).min().orElse(0)
@@ -103,19 +121,19 @@ public class GraphGenerator {
         
         // Desenhar grade e eixos
         drawGrid(g2d, chartX, chartY, chartWidth, chartHeight);
-        drawAxes(g2d, chartX, chartY, chartWidth, chartHeight, minTime, maxTime, minSpeed, maxSpeed,
-                "Tempo (s)", "Velocidade (km/h)");
+        drawAxes(g2d, chartX, chartY, chartWidth, chartHeight, minDist, maxDist, minSpeed, maxSpeed,
+                "Distancia (km)", "Velocidade (km/h)");
         
         // Desenhar linhas
-        drawLine(g2d, chartX, chartY, chartWidth, chartHeight, timestamps, realSpeeds,
-                minTime, maxTime, minSpeed, maxSpeed, REAL_SPEED_COLOR);
+        drawLine(g2d, chartX, chartY, chartWidth, chartHeight, distances, realSpeeds,
+                minDist, maxDist, minSpeed, maxSpeed, REAL_SPEED_COLOR);
         
-        drawLine(g2d, chartX, chartY, chartWidth, chartHeight, timestamps, optimalSpeeds,
-                minTime, maxTime, minSpeed, maxSpeed, OPTIMAL_SPEED_COLOR);
+        drawLine(g2d, chartX, chartY, chartWidth, chartHeight, distances, optimalSpeeds,
+                minDist, maxDist, minSpeed, maxSpeed, OPTIMAL_SPEED_COLOR);
         
         // Título e legenda
-        drawTitle(g2d, "Velocidades Ótimas vs Velocidades Reais");
-        drawLegend(g2d, new String[]{"Velocidade Real", "Velocidade Ótima"}, 
+        drawTitle(g2d, "Velocidades Otimas vs Velocidades Reais");
+        drawLegend(g2d, new String[]{"Velocidade Real", "Velocidade Otima"}, 
                   new Color[]{REAL_SPEED_COLOR, OPTIMAL_SPEED_COLOR}, CHART_WIDTH - 200, chartY + 50);
         
         // Estatísticas
@@ -139,61 +157,103 @@ public class GraphGenerator {
         int chartWidth = CHART_WIDTH - 2 * MARGIN;
         int chartHeight = CHART_HEIGHT - 2 * MARGIN;
         
-        // Dados das estatísticas
-        String[] labels = {"Média", "Desvio Padrão", "Polarização", "Precisão", "Incerteza"};
-        double[] values = {
-            dataReconciliation.getMeanSpeed(),
-            dataReconciliation.getStandardDeviation(),
-            Math.abs(dataReconciliation.getBias()),
-            dataReconciliation.getPrecision() * 100,
-            dataReconciliation.getUncertainty()
-        };
-        Color[] colors = {
-            new Color(51, 122, 183),   // Azul
-            new Color(217, 83, 79),    // Vermelho
-            new Color(92, 184, 92),    // Verde
-            new Color(240, 173, 78),   // Laranja
-            new Color(156, 39, 176)    // Roxo
-        };
+        // Obter sensores com leituras
+        List<DataReconciliation.DistanceSensor> sensors = new ArrayList<>();
+        for (DataReconciliation.DistanceSensor sensor : dataReconciliation.getDistanceSensors()) {
+            if (sensor.getReadingCount() > 0) {
+                sensors.add(sensor);
+            }
+        }
+        
+        if (sensors.isEmpty()) {
+            drawNoDataMessage(g2d, "Nenhum sensor com leituras disponivel");
+            saveImage(image, outputDirectory + "/2_estatisticas_reconciliacao.png");
+            g2d.dispose();
+            return;
+        }
+        
+        // Preparar dados para o gráfico de barras agrupadas
+        String[] sensorIds = sensors.stream().map(DataReconciliation.DistanceSensor::getId).toArray(String[]::new);
+        double[] meanSpeeds = sensors.stream().mapToDouble(DataReconciliation.DistanceSensor::getMeanSpeed).toArray();
+        double[] stdDevs = sensors.stream().mapToDouble(DataReconciliation.DistanceSensor::getStandardDeviation).toArray();
+        double[] precisions = sensors.stream().mapToDouble(s -> s.getPrecision() * 100).toArray();
         
         // Encontrar valor máximo para escala
-        double maxValue = Arrays.stream(values).max().orElse(100);
+        double maxValue = Math.max(
+            Arrays.stream(meanSpeeds).max().orElse(100),
+            Math.max(
+                Arrays.stream(stdDevs).max().orElse(20),
+                Arrays.stream(precisions).max().orElse(100)
+            )
+        );
         maxValue = Math.ceil(maxValue / 10) * 10; // Arredondar para cima
         
         // Desenhar grade e eixos
         drawGrid(g2d, chartX, chartY, chartWidth, chartHeight);
-        drawAxes(g2d, chartX, chartY, chartWidth, chartHeight, 0, labels.length, 0, maxValue,
-                "Métricas de Reconciliação", "Valores");
+        drawAxes(g2d, chartX, chartY, chartWidth, chartHeight, 0, sensorIds.length, 0, maxValue,
+                "Sensores", "Valores");
         
-        // Desenhar barras
-        int barWidth = chartWidth / (labels.length + 1);
-        for (int i = 0; i < labels.length; i++) {
-            int barHeight = (int) ((values[i] / maxValue) * chartHeight);
-            int barX = chartX + (i + 1) * barWidth - barWidth / 4;
-            int barY = chartY + chartHeight - barHeight;
+        // Desenhar barras agrupadas
+        int groupWidth = chartWidth / (sensorIds.length + 1);
+        int barWidth = groupWidth / 4;
+        
+        for (int i = 0; i < sensorIds.length; i++) {
+            int groupX = chartX + (i + 1) * groupWidth - groupWidth / 2;
             
-            g2d.setColor(colors[i]);
-            g2d.fillRect(barX, barY, barWidth / 2, barHeight);
+            // Barra 1: Velocidade Média
+            int barHeight1 = (int) ((meanSpeeds[i] / maxValue) * chartHeight);
+            int barX1 = groupX - barWidth - 5;
+            int barY1 = chartY + chartHeight - barHeight1;
+            g2d.setColor(REAL_SPEED_COLOR);
+            g2d.fillRect(barX1, barY1, barWidth, barHeight1);
             
             // Valor no topo da barra
             g2d.setColor(AXIS_COLOR);
-            g2d.setFont(new Font("Arial", Font.BOLD, 12));
-            String valueStr = String.format("%.2f", values[i]);
+            g2d.setFont(new Font("Arial", Font.BOLD, 10));
+            String valueStr1 = String.format("%.1f", meanSpeeds[i]);
             FontMetrics fm = g2d.getFontMetrics();
-            g2d.drawString(valueStr, barX + barWidth / 4 - fm.stringWidth(valueStr) / 2, barY - 5);
+            g2d.drawString(valueStr1, barX1 + barWidth/2 - fm.stringWidth(valueStr1)/2, barY1 - 5);
             
-            // Label da barra
+            // Barra 2: Desvio Padrão
+            int barHeight2 = (int) ((stdDevs[i] / maxValue) * chartHeight);
+            int barX2 = groupX;
+            int barY2 = chartY + chartHeight - barHeight2;
+            g2d.setColor(MEASURED_SPEED_COLOR);
+            g2d.fillRect(barX2, barY2, barWidth, barHeight2);
+            
+            // Valor no topo da barra
+            g2d.setColor(AXIS_COLOR);
+            String valueStr2 = String.format("%.1f", stdDevs[i]);
+            g2d.drawString(valueStr2, barX2 + barWidth/2 - fm.stringWidth(valueStr2)/2, barY2 - 5);
+            
+            // Barra 3: Precisão
+            int barHeight3 = (int) ((precisions[i] / maxValue) * chartHeight);
+            int barX3 = groupX + barWidth + 5;
+            int barY3 = chartY + chartHeight - barHeight3;
+            g2d.setColor(OPTIMAL_SPEED_COLOR);
+            g2d.fillRect(barX3, barY3, barWidth, barHeight3);
+            
+            // Valor no topo da barra
+            g2d.setColor(AXIS_COLOR);
+            String valueStr3 = String.format("%.1f", precisions[i]);
+            g2d.drawString(valueStr3, barX3 + barWidth/2 - fm.stringWidth(valueStr3)/2, barY3 - 5);
+            
+            // Label do sensor
             g2d.setFont(new Font("Arial", Font.PLAIN, 11));
             fm = g2d.getFontMetrics();
-            g2d.drawString(labels[i], barX + barWidth / 4 - fm.stringWidth(labels[i]) / 2, 
-                          chartY + chartHeight + 20);
+            g2d.drawString(sensorIds[i], groupX - fm.stringWidth(sensorIds[i])/2, chartY + chartHeight + 20);
         }
         
         // Título
-        drawTitle(g2d, "Estatísticas de Reconciliação de Dados");
+        drawTitle(g2d, "Estatisticas de Reconciliacao por Sensor (10 execucoes)");
+        
+        // Legenda
+        drawLegend(g2d, new String[]{"Velocidade Media (km/h)", "Desvio Padrao (km/h)", "Precisao (%)"}, 
+                  new Color[]{REAL_SPEED_COLOR, MEASURED_SPEED_COLOR, OPTIMAL_SPEED_COLOR}, 
+                  CHART_WIDTH - 250, chartY + 50);
         
         // Informações adicionais
-        drawReconciliationInfo(g2d, dataReconciliation, CHART_WIDTH - 300, chartY + 100);
+        drawSensorStatisticsInfo(g2d, sensors, CHART_WIDTH - 300, chartY + 150);
         
         g2d.dispose();
         saveImage(image, outputDirectory + "/2_estatisticas_reconciliacao.png");
@@ -213,63 +273,104 @@ public class GraphGenerator {
         int chartWidth = CHART_WIDTH - 2 * MARGIN;
         int chartHeight = CHART_HEIGHT - 2 * MARGIN;
         
-        // Obter dados
-        List<DataReconciliation.SensorReading> readings = dataReconciliation.getSensorReadings();
+        // Obter sensores com leituras
+        List<DataReconciliation.DistanceSensor> sensors = new ArrayList<>();
+        for (DataReconciliation.DistanceSensor sensor : dataReconciliation.getDistanceSensors()) {
+            if (sensor.getReadingCount() > 0) {
+                sensors.add(sensor);
+            }
+        }
         
-        if (readings.isEmpty()) {
-            drawNoDataMessage(g2d, "Nenhum dado disponível para sensores");
+        if (sensors.isEmpty()) {
+            drawNoDataMessage(g2d, "Nenhum sensor com leituras disponivel");
             saveImage(image, outputDirectory + "/3_medicao_sensores_velocidade.png");
             g2d.dispose();
             return;
         }
         
-        // Preparar dados
-        List<Double> timestamps = new ArrayList<>();
-        List<Double> realSpeeds = new ArrayList<>();
-        List<Double> measuredSpeeds = new ArrayList<>();
+        // Preparar dados para o gráfico de dispersão
+        Map<String, List<Double>> sensorRuns = new HashMap<>();
+        Map<String, List<Double>> sensorSpeeds = new HashMap<>();
         
-        for (DataReconciliation.SensorReading reading : readings) {
-            timestamps.add(reading.getTimestamp());
-            realSpeeds.add(reading.getRealSpeed());
-            measuredSpeeds.add(reading.getMeasuredSpeed());
+        // Inicializar listas para cada sensor
+        for (DataReconciliation.DistanceSensor sensor : sensors) {
+            sensorRuns.put(sensor.getId(), new ArrayList<>());
+            sensorSpeeds.put(sensor.getId(), new ArrayList<>());
+        }
+        
+        // Preencher dados
+        for (DataReconciliation.DistanceSensor sensor : sensors) {
+            for (DataReconciliation.SensorReading reading : sensor.getReadings()) {
+                sensorRuns.get(sensor.getId()).add((double) reading.getRunNumber());
+                sensorSpeeds.get(sensor.getId()).add(reading.getMeasuredSpeed());
+            }
         }
         
         // Encontrar valores mínimos e máximos
-        double minTime = timestamps.stream().mapToDouble(Double::doubleValue).min().orElse(0);
-        double maxTime = timestamps.stream().mapToDouble(Double::doubleValue).max().orElse(1);
-        double minSpeed = Math.min(
-            realSpeeds.stream().mapToDouble(Double::doubleValue).min().orElse(0),
-            measuredSpeeds.stream().mapToDouble(Double::doubleValue).min().orElse(0)
-        ) - 5;
-        double maxSpeed = Math.max(
-            realSpeeds.stream().mapToDouble(Double::doubleValue).max().orElse(100),
-            measuredSpeeds.stream().mapToDouble(Double::doubleValue).max().orElse(100)
-        ) + 5;
+        double minRun = 1;
+        double maxRun = 10;
+        double minSpeed = sensorSpeeds.values().stream()
+            .flatMap(List::stream)
+            .mapToDouble(Double::doubleValue)
+            .min().orElse(0) - 5;
+        double maxSpeed = sensorSpeeds.values().stream()
+            .flatMap(List::stream)
+            .mapToDouble(Double::doubleValue)
+            .max().orElse(100) + 5;
         
         // Desenhar grade e eixos
         drawGrid(g2d, chartX, chartY, chartWidth, chartHeight);
-        drawAxes(g2d, chartX, chartY, chartWidth, chartHeight, minTime, maxTime, minSpeed, maxSpeed,
-                "Tempo (s) - Medições a cada 1 segundo", "Velocidade (km/h)");
+        drawAxes(g2d, chartX, chartY, chartWidth, chartHeight, minRun, maxRun, minSpeed, maxSpeed,
+                "Execucao", "Velocidade (km/h)");
         
-        // Desenhar linhas
-        drawLine(g2d, chartX, chartY, chartWidth, chartHeight, timestamps, realSpeeds,
-                minTime, maxTime, minSpeed, maxSpeed, REAL_SPEED_COLOR);
-        
-        drawLine(g2d, chartX, chartY, chartWidth, chartHeight, timestamps, measuredSpeeds,
-                minTime, maxTime, minSpeed, maxSpeed, MEASURED_SPEED_COLOR);
-        
-        // Desenhar pontos de medição
-        drawMeasurementPoints(g2d, chartX, chartY, chartWidth, chartHeight, timestamps, measuredSpeeds,
-                             minTime, maxTime, minSpeed, maxSpeed);
+        // Desenhar pontos para cada sensor
+        int sensorIndex = 0;
+        for (DataReconciliation.DistanceSensor sensor : sensors) {
+            Color sensorColor = SENSOR_COLORS[sensorIndex % SENSOR_COLORS.length];
+            
+            List<Double> runs = sensorRuns.get(sensor.getId());
+            List<Double> speeds = sensorSpeeds.get(sensor.getId());
+            
+            for (int i = 0; i < Math.min(runs.size(), speeds.size()); i++) {
+                double run = runs.get(i);
+                double speed = speeds.get(i);
+                
+                int x = chartX + (int) (((run - minRun) / (maxRun - minRun)) * chartWidth);
+                int y = chartY + chartHeight - (int) (((speed - minSpeed) / (maxSpeed - minSpeed)) * chartHeight);
+                
+                g2d.setColor(sensorColor);
+                g2d.fillOval(x - 4, y - 4, 8, 8);
+                
+                // Desenhar linha vertical para cada execução
+                if (i == 0 || runs.get(i) != runs.get(i-1)) {
+                    g2d.setColor(new Color(200, 200, 200, 100));
+                    g2d.drawLine(x, chartY, x, chartY + chartHeight);
+                    
+                    g2d.setColor(AXIS_COLOR);
+                    g2d.setFont(new Font("Arial", Font.PLAIN, 9));
+                    g2d.drawString(String.format("%.0f", run), x - 3, chartY - 5);
+                }
+            }
+            
+            sensorIndex++;
+        }
         
         // Título e legenda
-        drawTitle(g2d, "Medições dos Sensores de Velocidade (1 medição por segundo)");
-        String[] labels = {"Velocidade Real", "Velocidade Medida", "Pontos de Medição"};
-        Color[] colors = {REAL_SPEED_COLOR, MEASURED_SPEED_COLOR, MEASURED_SPEED_COLOR};
-        drawLegend(g2d, labels, colors, CHART_WIDTH - 250, chartY + 50);
+        drawTitle(g2d, "Medicoes dos Sensores de Velocidade (10 execucoes)");
+        
+        // Criar arrays para legenda
+        String[] sensorLabels = new String[sensors.size()];
+        Color[] sensorColorArray = new Color[sensors.size()];
+        
+        for (int i = 0; i < sensors.size(); i++) {
+            sensorLabels[i] = sensors.get(i).getId() + " (" + sensors.get(i).getDistancePosition() + " km)";
+            sensorColorArray[i] = SENSOR_COLORS[i % SENSOR_COLORS.length];
+        }
+        
+        drawLegend(g2d, sensorLabels, sensorColorArray, CHART_WIDTH - 250, chartY + 50);
         
         // Estatísticas dos sensores
-        drawSensorStatistics(g2d, readings, CHART_WIDTH - 280, chartY + 150);
+        drawSensorMeasurementStatistics(g2d, sensors, CHART_WIDTH - 280, chartY + 150);
         
         g2d.dispose();
         saveImage(image, outputDirectory + "/3_medicao_sensores_velocidade.png");
@@ -336,93 +437,83 @@ public class GraphGenerator {
         }
     }
     
-    private void drawMeasurementPoints(Graphics2D g2d, int chartX, int chartY, int chartWidth, int chartHeight,
-                                     List<Double> timestamps, List<Double> measuredSpeeds,
-                                     double minTime, double maxTime, double minSpeed, double maxSpeed) {
-        g2d.setColor(MEASURED_SPEED_COLOR);
-        
-        for (int i = 0; i < timestamps.size(); i++) {
-            double time = timestamps.get(i);
-            double speed = measuredSpeeds.get(i);
-            
-            int x = chartX + (int) (((time - minTime) / (maxTime - minTime)) * chartWidth);
-            int y = chartY + chartHeight - (int) (((speed - minSpeed) / (maxSpeed - minSpeed)) * chartHeight);
-            
-            g2d.fillOval(x - 3, y - 3, 6, 6);
-            
-            // Linha vertical a cada 5 segundos
-            if (i % 5 == 0) {
-                g2d.setColor(new Color(200, 200, 200, 100));
-                g2d.drawLine(x, chartY, x, chartY + chartHeight);
-                
-                g2d.setColor(AXIS_COLOR);
-                g2d.setFont(new Font("Arial", Font.PLAIN, 9));
-                g2d.drawString(String.format("%.0fs", time), x - 8, chartY - 5);
-                g2d.setColor(MEASURED_SPEED_COLOR);
-            }
-        }
-    }
-    
     private void drawTitle(Graphics2D g2d, String title) {
         g2d.setColor(AXIS_COLOR);
         g2d.setFont(new Font("Arial", Font.BOLD, 18));
         FontMetrics fm = g2d.getFontMetrics();
         int titleX = (CHART_WIDTH - fm.stringWidth(title)) / 2;
-        g2d.drawString(title, titleX, 35);
+        g2d.drawString(title, titleX, 30);
     }
     
     private void drawLegend(Graphics2D g2d, String[] labels, Color[] colors, int x, int y) {
         g2d.setFont(new Font("Arial", Font.PLAIN, 12));
+        FontMetrics fm = g2d.getFontMetrics();
+        
         for (int i = 0; i < labels.length; i++) {
             g2d.setColor(colors[i]);
-            g2d.drawString("■ " + labels[i], x, y + i * 20);
+            g2d.fillRect(x, y + i * 20, 15, 15);
+            
+            g2d.setColor(AXIS_COLOR);
+            g2d.drawString(labels[i], x + 20, y + i * 20 + 12);
         }
     }
     
     private void drawOptimalSpeedStatistics(Graphics2D g2d, List<Double> realSpeeds, List<Double> optimalSpeeds, int x, int y) {
         g2d.setFont(new Font("Arial", Font.BOLD, 12));
         g2d.setColor(AXIS_COLOR);
-        g2d.drawString("Estatísticas:", x, y);
+        g2d.drawString("Estatisticas de Velocidade:", x, y);
         
         g2d.setFont(new Font("Arial", Font.PLAIN, 11));
         
-        double avgReal = realSpeeds.stream().mapToDouble(Double::doubleValue).average().orElse(0);
-        double avgOptimal = optimalSpeeds.stream().mapToDouble(Double::doubleValue).average().orElse(0);
-        double fuelSavings = ((avgReal - avgOptimal) / avgReal) * 100;
+        double realAvg = realSpeeds.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        double optimalAvg = optimalSpeeds.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        double fuelSaving = (realAvg - optimalAvg) / realAvg * 100;
         
-        g2d.drawString(String.format("Vel. Real Média: %.2f km/h", avgReal), x, y + 20);
-        g2d.drawString(String.format("Vel. Ótima Média: %.2f km/h", avgOptimal), x, y + 35);
-        g2d.drawString(String.format("Economia Estimada: %.1f%%", Math.max(0, fuelSavings)), x, y + 50);
-        g2d.drawString(String.format("Pontos Analisados: %d", realSpeeds.size()), x, y + 65);
+        g2d.drawString(String.format("Velocidade Real Media: %.2f km/h", realAvg), x, y + 20);
+        g2d.drawString(String.format("Velocidade Otima Media: %.2f km/h", optimalAvg), x, y + 35);
+        g2d.drawString(String.format("Economia Estimada: %.2f%%", fuelSaving), x, y + 50);
+        g2d.drawString(String.format("Total de Pontos: %d", realSpeeds.size()), x, y + 65);
     }
     
-    private void drawReconciliationInfo(Graphics2D g2d, DataReconciliation dataReconciliation, int x, int y) {
+    private void drawSensorStatisticsInfo(Graphics2D g2d, List<DataReconciliation.DistanceSensor> sensors, int x, int y) {
         g2d.setFont(new Font("Arial", Font.BOLD, 12));
         g2d.setColor(AXIS_COLOR);
-        g2d.drawString("Informações da Reconciliação:", x, y);
+        g2d.drawString("Informacoes dos Sensores:", x, y);
         
         g2d.setFont(new Font("Arial", Font.PLAIN, 11));
-        g2d.drawString(String.format("Medidores de Fluxo: %d", dataReconciliation.getFlowMeters().size()), x, y + 20);
-        g2d.drawString(String.format("Leituras Coletadas: %d", dataReconciliation.getSensorReadings().size()), x, y + 35);
-        g2d.drawString(String.format("Comprimento da Rota: %.1f km", dataReconciliation.getRouteLength()), x, y + 50);
-        g2d.drawString(String.format("Tempo de Simulação: %.1f s", dataReconciliation.getSimulationTime()), x, y + 65);
+        
+        int totalReadings = sensors.stream().mapToInt(DataReconciliation.DistanceSensor::getReadingCount).sum();
+        double avgPrecision = sensors.stream().mapToDouble(s -> s.getPrecision() * 100).average().orElse(0);
+        double avgError = sensors.stream().mapToDouble(DataReconciliation.DistanceSensor::getMeanError).average().orElse(0);
+        
+        g2d.drawString(String.format("Total de Sensores: %d", sensors.size()), x, y + 20);
+        g2d.drawString(String.format("Total de Leituras: %d", totalReadings), x, y + 35);
+        g2d.drawString(String.format("Precisao Media: %.2f%%", avgPrecision), x, y + 50);
+        g2d.drawString(String.format("Erro Medio: %.2f km/h", avgError), x, y + 65);
+        g2d.drawString("Baseado em 10 execucoes por sensor", x, y + 80);
     }
     
-    private void drawSensorStatistics(Graphics2D g2d, List<DataReconciliation.SensorReading> readings, int x, int y) {
+    private void drawSensorMeasurementStatistics(Graphics2D g2d, List<DataReconciliation.DistanceSensor> sensors, int x, int y) {
         g2d.setFont(new Font("Arial", Font.BOLD, 12));
         g2d.setColor(AXIS_COLOR);
-        g2d.drawString("Estatísticas Temporais:", x, y);
+        g2d.drawString("Estatisticas por Sensor:", x, y);
         
         g2d.setFont(new Font("Arial", Font.PLAIN, 11));
         
-        double avgError = readings.stream().mapToDouble(DataReconciliation.SensorReading::getError).average().orElse(0);
-        double maxError = readings.stream().mapToDouble(DataReconciliation.SensorReading::getError).max().orElse(0);
-        double minError = readings.stream().mapToDouble(DataReconciliation.SensorReading::getError).min().orElse(0);
-        
-        g2d.drawString(String.format("Medições: %d (1 por segundo)", readings.size()), x, y + 20);
-        g2d.drawString(String.format("Erro Médio: %.2f km/h", avgError), x, y + 35);
-        g2d.drawString(String.format("Erro Máximo: %.2f km/h", maxError), x, y + 50);
-        g2d.drawString(String.format("Erro Mínimo: %.2f km/h", minError), x, y + 65);
+        int row = 0;
+        for (DataReconciliation.DistanceSensor sensor : sensors) {
+            if (row >= 5) {
+                // Continuar na próxima coluna
+                x += 150;
+                row = 0;
+            }
+            
+            g2d.drawString(String.format("%s: %.1f km/h, %d leituras", 
+                sensor.getId(), sensor.getMeanSpeed(), sensor.getReadingCount()), 
+                x, y + 20 + row * 15);
+            
+            row++;
+        }
     }
     
     private void drawNoDataMessage(Graphics2D g2d, String message) {
@@ -437,9 +528,9 @@ public class GraphGenerator {
     private void saveImage(BufferedImage image, String path) {
         try {
             ImageIO.write(image, "PNG", new File(path));
-            System.out.printf("Gráfico salvo: %s\n", path);
+            System.out.printf("Grafico salvo: %s\n", path);
         } catch (IOException e) {
-            System.err.printf("Erro ao salvar gráfico %s: %s\n", path, e.getMessage());
+            System.err.printf("Erro ao salvar grafico %s: %s\n", path, e.getMessage());
         }
     }
 }

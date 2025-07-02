@@ -3,6 +3,8 @@ package io.sim;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.sim.sumo.SumoCommandExecutor;
 import io.sim.sumo.cmd.*;
@@ -12,16 +14,20 @@ import de.tudresden.sumo.objects.SumoStringList;
 /**
  * Classe responsável pela Reconciliação de Dados (AV2 - Parte I)
  * Integrada com SUMO para obter dados reais de velocidade e posição
+ * Modificada para suportar múltiplos veículos em uma única simulação
  */
 public class DataReconciliation {
     
     private SumoCommandExecutor sumoExecutor;
-    private String vehicleId;
+    private String baseVehicleId; // ID base do veículo (ex: "0")
+    private List<String> vehicleIds; // Lista de IDs de veículos (ex: "0_run1", "0_run2", etc.)
     private List<SensorReading> sensorReadings;
-    private List<FlowMeter> flowMeters;
+    private List<DistanceSensor> distanceSensors;
     private double routeLength;
     private double averageSpeed = 80.0; // km/h
     private double simulationTime;
+    private int totalRuns;
+    private Map<String, Integer> vehicleRunMap; // Mapa de ID do veículo para número da execução
     
     // Estatísticas de reconciliação
     private double meanSpeed;
@@ -36,6 +42,7 @@ public class DataReconciliation {
     public static class SensorReading {
         public double timestamp;
         public String vehicleId;
+        public int runNumber; // Número da execução
         public double realSpeed;
         public double measuredSpeed;
         public double optimalSpeed;
@@ -43,10 +50,13 @@ public class DataReconciliation {
         public double distance;
         public double fuelConsumption;
         public double error;
+        public String sensorId; // ID do sensor que fez a leitura
         
-        public SensorReading(double timestamp, String vehicleId) {
+        public SensorReading(double timestamp, String vehicleId, int runNumber, String sensorId) {
             this.timestamp = timestamp;
             this.vehicleId = vehicleId;
+            this.runNumber = runNumber;
+            this.sensorId = sensorId;
         }
         
         // Getters públicos
@@ -59,59 +69,148 @@ public class DataReconciliation {
         public double getDistance() { return distance; }
         public double getFuelConsumption() { return fuelConsumption; }
         public double getError() { return error; }
+        public String getSensorId() { return sensorId; }
+        public int getRunNumber() { return runNumber; }
     }
     
     /**
-     * Classe interna para medidores de fluxo
+     * Classe interna para sensores baseados em distância
      */
-    public static class FlowMeter {
+    public static class DistanceSensor {
         public String id;
-        public double position;
-        public double measuredFlow;
-        public double reconciledFlow;
-        public double uncertainty;
+        public double distancePosition; // Posição em km na rota
+        public List<SensorReading> readings; // Leituras deste sensor
         
-        public FlowMeter(String id, double position) {
+        // Estatísticas específicas deste sensor
+        public double meanSpeed;
+        public double standardDeviation;
+        public double bias;
+        public double precision;
+        public double uncertainty;
+        public double meanError;
+        
+        public DistanceSensor(String id, double distancePosition) {
             this.id = id;
-            this.position = position;
+            this.distancePosition = distancePosition;
+            this.readings = new ArrayList<>();
+        }
+        
+        /**
+         * Calcula estatísticas para este sensor baseadas em todas as leituras
+         */
+        public void calculateStatistics() {
+            if (readings.isEmpty()) return;
+            
+            // Calcular média das velocidades medidas
+            meanSpeed = readings.stream()
+                .mapToDouble(SensorReading::getMeasuredSpeed)
+                .average()
+                .orElse(0);
+            
+            // Calcular desvio padrão
+            standardDeviation = Math.sqrt(
+                readings.stream()
+                    .mapToDouble(r -> Math.pow(r.getMeasuredSpeed() - meanSpeed, 2))
+                    .average()
+                    .orElse(0)
+            );
+            
+            // Calcular polarização (bias)
+            double realMean = readings.stream()
+                .mapToDouble(SensorReading::getRealSpeed)
+                .average()
+                .orElse(0);
+            bias = meanSpeed - realMean;
+            
+            // Calcular precisão
+            precision = 1.0 / (1.0 + standardDeviation / meanSpeed);
+            
+            // Calcular incerteza
+            uncertainty = Math.sqrt(Math.pow(standardDeviation, 2) + Math.pow(bias, 2));
+            
+            // Calcular erro médio
+            meanError = readings.stream()
+                .mapToDouble(SensorReading::getError)
+                .average()
+                .orElse(0);
         }
         
         // Getters públicos
         public String getId() { return id; }
-        public double getPosition() { return position; }
-        public double getMeasuredFlow() { return measuredFlow; }
-        public double getReconciledFlow() { return reconciledFlow; }
+        public double getDistancePosition() { return distancePosition; }
+        public List<SensorReading> getReadings() { return readings; }
+        public double getMeanSpeed() { return meanSpeed; }
+        public double getStandardDeviation() { return standardDeviation; }
+        public double getBias() { return bias; }
+        public double getPrecision() { return precision; }
         public double getUncertainty() { return uncertainty; }
-    }
-    
-    public DataReconciliation(SumoCommandExecutor sumoExecutor, String vehicleId) {
-        this.sumoExecutor = sumoExecutor;
-        this.vehicleId = vehicleId;
-        this.sensorReadings = new ArrayList<>();
-        this.flowMeters = new ArrayList<>();
-        
-        // Inicializar medidores de fluxo
-        initializeFlowMeters();
+        public double getMeanError() { return meanError; }
+        public int getReadingCount() { return readings.size(); }
     }
     
     /**
-     * Inicializa os medidores de fluxo ao longo da rota
+     * Construtor para múltiplos veículos em uma única simulação
+     * @param sumoExecutor Executor de comandos SUMO
+     * @param baseVehicleId ID base do veículo (ex: "0")
+     * @param totalRuns Número total de execuções
      */
-    private void initializeFlowMeters() {
-        for (int i = 0; i < 6; i++) {
-            String meterId = String.format("FM_%02d", i + 1);
-            double position = (double) i / 5.0; // Posições de 0.0 a 1.0
-            flowMeters.add(new FlowMeter(meterId, position));
+    public DataReconciliation(SumoCommandExecutor sumoExecutor, String baseVehicleId, int totalRuns) {
+        this.sumoExecutor = sumoExecutor;
+        this.baseVehicleId = baseVehicleId;
+        this.totalRuns = totalRuns;
+        this.sensorReadings = new ArrayList<>();
+        this.distanceSensors = new ArrayList<>();
+        this.vehicleIds = new ArrayList<>();
+        this.vehicleRunMap = new HashMap<>();
+        
+        // Gerar IDs de veículos para todas as execuções
+        for (int run = 1; run <= totalRuns; run++) {
+            String vehicleId = baseVehicleId + "_run" + run;
+            vehicleIds.add(vehicleId);
+            vehicleRunMap.put(vehicleId, run);
         }
-        System.out.printf(" Inicializados %d medidores de fluxo\n", flowMeters.size());
+        
+        System.out.printf("Inicializado sistema para %d execucoes com veiculos: %s\n", 
+                         totalRuns, String.join(", ", vehicleIds));
+    }
+    
+    /**
+     * Inicializa os sensores distribuídos a cada 5km ao longo da rota
+     */
+    public void initializeDistanceSensors() {
+        // Limpar sensores existentes
+        distanceSensors.clear();
+        
+        // Calcular número de sensores baseado no comprimento da rota
+        int numSensors = (int) Math.ceil(routeLength / 5.0);
+        
+        // Criar sensores a cada 5km
+        for (int i = 0; i < numSensors; i++) {
+            String sensorId = String.format("S%02d", i + 1);
+            double position = i * 5.0; // Posição em km (0, 5, 10, 15, ...)
+            distanceSensors.add(new DistanceSensor(sensorId, position));
+        }
+        
+        System.out.printf("Inicializados %d sensores a cada 5km ao longo da rota de %.1f km\n", 
+                         distanceSensors.size(), routeLength);
+        
+        // Listar sensores
+        for (DistanceSensor sensor : distanceSensors) {
+            System.out.printf("Sensor %s: posicao %.1f km\n", sensor.getId(), sensor.getDistancePosition());
+        }
     }
     
     /**
      * Calcula o tempo de simulação baseado no comprimento da rota e velocidade média
      */
     public void calculateSimulationTime() throws InterruptedException, ExecutionException {
-        // Obter informações da rota do veículo
-        CompletableFuture<String> routeIdFuture = sumoExecutor.submitCommand(new GetVehicleRouteIDCommand(vehicleId));
+        // Obter informações da rota do primeiro veículo disponível
+        String firstVehicleId = findFirstAvailableVehicle();
+        if (firstVehicleId == null) {
+            throw new RuntimeException("Nenhum veiculo disponivel na simulacao");
+        }
+        
+        CompletableFuture<String> routeIdFuture = sumoExecutor.submitCommand(new GetVehicleRouteIDCommand(firstVehicleId));
         String routeId = routeIdFuture.get();
         
         // Para simplificar, vamos estimar o comprimento da rota
@@ -122,8 +221,32 @@ public class DataReconciliation {
         this.simulationTime = (routeLength / averageSpeed) * 3600; // converter para segundos
         
         System.out.printf("Comprimento estimado da rota: %.2f km\n", routeLength);
-        System.out.printf("Velocidade média: %.1f km/h\n", averageSpeed);
-        System.out.printf("Tempo de simulação calculado: %.1f segundos\n", simulationTime);
+        System.out.printf("Velocidade media: %.1f km/h\n", averageSpeed);
+        System.out.printf("Tempo de simulacao calculado: %.1f segundos\n", simulationTime);
+        
+        // Inicializar sensores baseados em distância
+        initializeDistanceSensors();
+    }
+    
+    /**
+     * Encontra o primeiro veículo disponível na simulação
+     */
+    private String findFirstAvailableVehicle() throws InterruptedException, ExecutionException {
+        CompletableFuture<SumoStringList> idListFuture = sumoExecutor.submitCommand(new GetVehicleIDListCommand());
+        SumoStringList idList = idListFuture.get();
+        
+        if (idList == null || idList.size() == 0) {
+            return null;
+        }
+        
+        // Verificar se algum dos nossos veículos está na simulação
+        for (String vehicleId : vehicleIds) {
+            if (idList.contains(vehicleId)) {
+                return vehicleId;
+            }
+        }
+        
+        return null;
     }
     
     /**
@@ -136,31 +259,62 @@ public class DataReconciliation {
     }
     
     /**
-     * Executa a coleta de dados da simulação SUMO
+     * Executa a coleta de dados para todos os veículos em uma única simulação
      */
     public void executeDataCollection() throws InterruptedException, ExecutionException {
-        System.out.println("Iniciando coleta de dados da simulação SUMO...");
-        System.out.printf("Veículo monitorado: %s\n", vehicleId);
+        System.out.println("Iniciando coleta de dados para todos os veiculos em uma unica simulacao...");
         
         double startTime = getCurrentSimulationTime();
-        double endTime = startTime + simulationTime;
+        double endTime = startTime + (simulationTime * totalRuns) + 1000; // Adicionar margem de segurança
         double currentTime = startTime;
         
-        int readingCount = 0;
+        int totalReadingCount = 0;
+        Set<String> completedVehicles = new HashSet<>();
         
-        while (currentTime < endTime && isVehicleInSimulation()) {
+        while (currentTime < endTime && completedVehicles.size() < totalRuns) {
             try {
-                // Coletar dados do SUMO a cada segundo
-                SensorReading reading = collectSumoData(currentTime);
-                if (reading != null) {
-                    sensorReadings.add(reading);
-                    readingCount++;
-                    
-                    // Log a cada 5 leituras
-                    if (readingCount % 5 == 0) {
-                        System.out.printf("Leitura %d: Tempo=%.1fs, Vel=%.1f km/h, Pos=(%.1f,%.1f), Dist=%.2f km\n",
-                            readingCount, reading.timestamp, reading.realSpeed, 
-                            reading.position.x, reading.position.y, reading.distance);
+                // Obter lista de veículos atualmente na simulação
+                CompletableFuture<SumoStringList> idListFuture = sumoExecutor.submitCommand(new GetVehicleIDListCommand());
+                SumoStringList idList = idListFuture.get();
+                
+                // Processar cada veículo da nossa lista que está na simulação
+                for (String vehicleId : vehicleIds) {
+                    if (idList.contains(vehicleId) && !completedVehicles.contains(vehicleId)) {
+                        // Obter número da execução para este veículo
+                        int runNumber = vehicleRunMap.get(vehicleId);
+                        
+                        // Coletar dados deste veículo
+                        SensorReading reading = collectVehicleData(vehicleId, currentTime, runNumber);
+                        if (reading != null) {
+                            // Verificar se o veículo está próximo de algum sensor de distância
+                            DistanceSensor nearestSensor = findNearestSensor(reading.distance);
+                            
+                            if (nearestSensor != null) {
+                                // Atualizar ID do sensor na leitura
+                                reading.sensorId = nearestSensor.id;
+                                
+                                // Adicionar leitura à lista geral
+                                sensorReadings.add(reading);
+                                
+                                // Adicionar leitura ao sensor específico
+                                nearestSensor.readings.add(reading);
+                                
+                                totalReadingCount++;
+                                
+                                // Log a cada 200 leituras para não poluir a saída
+                                if (totalReadingCount % 200 == 0) {
+                                    System.out.printf("Leitura %d: Veiculo=%s, Run=%d, Tempo=%.0fs, Vel=%.1f km/h, Dist=%.2f km, Sensor=%s\n",
+                                        totalReadingCount, vehicleId, runNumber, reading.timestamp, reading.realSpeed, 
+                                        reading.distance, reading.sensorId);
+                                }
+                            }
+                        }
+                    } else if (!idList.contains(vehicleId) && vehicleIds.contains(vehicleId) && !completedVehicles.contains(vehicleId)) {
+                        // Veículo já apareceu na simulação mas não está mais presente
+                        // Isso significa que ele completou sua rota
+                        int runNumber = vehicleRunMap.get(vehicleId);
+                        System.out.printf("Veiculo %s (execucao %d) completou sua rota\n", vehicleId, runNumber);
+                        completedVehicles.add(vehicleId);
                     }
                 }
                 
@@ -169,21 +323,35 @@ public class DataReconciliation {
                 currentTime = getCurrentSimulationTime();
                 
                 // Pequena pausa para não sobrecarregar
-                Thread.sleep(100);
+                Thread.sleep(10);
                 
             } catch (Exception e) {
                 System.err.printf("Erro na coleta de dados no tempo %.1f: %s\n", currentTime, e.getMessage());
-                break;
+                e.printStackTrace();
             }
         }
         
-        System.out.printf("Coleta concluída: %d leituras coletadas\n", sensorReadings.size());
+        System.out.printf("Coleta concluida: %d leituras coletadas de %d veiculos\n", 
+                         totalReadingCount, completedVehicles.size());
     }
     
     /**
-     * Coleta dados do SUMO para um timestamp específico
+     * Encontra o sensor mais próximo da distância atual
+     * Um sensor é considerado "próximo" se o veículo estiver a no máximo 0.5km de distância
      */
-    private SensorReading collectSumoData(double timestamp) throws InterruptedException, ExecutionException {
+    private DistanceSensor findNearestSensor(double currentDistance) {
+        for (DistanceSensor sensor : distanceSensors) {
+            if (Math.abs(currentDistance - sensor.distancePosition) <= 0.5) {
+                return sensor;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Coleta dados de um veículo específico
+     */
+    private SensorReading collectVehicleData(String vehicleId, double timestamp, int runNumber) throws InterruptedException, ExecutionException {
         try {
             // Coletar dados em paralelo do SUMO
             CompletableFuture<Double> speedFuture = sumoExecutor.submitCommand(new GetVehicleSpeedCommand(vehicleId));
@@ -200,25 +368,32 @@ public class DataReconciliation {
             double distance = distanceFuture.get() / 1000.0; // converter m para km
             double fuelConsumption = fuelFuture.get();
             
-            // Criar leitura do sensor
-            SensorReading reading = new SensorReading(timestamp, vehicleId);
+            // Criar leitura do sensor (sem ID de sensor ainda)
+            SensorReading reading = new SensorReading(timestamp, vehicleId, runNumber, "");
             reading.realSpeed = realSpeed;
             reading.position = position;
             reading.distance = distance;
             reading.fuelConsumption = fuelConsumption;
             
-            // Calcular velocidade ótima baseada na tabela Fox 1.0
+            // Simular ruído do sensor (±2 km/h)
+            Random random = new Random();
+            double noise = (random.nextGaussian() * 2.0);
+            reading.measuredSpeed = Math.max(0, realSpeed + noise);
+            
+            // Calcular velocidade ótima baseada na tabela de consumo
             reading.optimalSpeed = calculateOptimalSpeed(realSpeed);
             
-            // Simular ruído do sensor (±2 km/h)
-            double noise = (Math.random() - 0.5) * 4.0;
-            reading.measuredSpeed = realSpeed + noise;
-            reading.error = Math.abs(reading.measuredSpeed - realSpeed);
+            // Calcular erro
+            reading.error = Math.abs(reading.measuredSpeed - reading.realSpeed);
             
             return reading;
             
         } catch (Exception e) {
-            System.err.printf(" Erro ao coletar dados do SUMO: %s\n", e.getMessage());
+            // Ignorar erros comuns quando o veículo não está mais na simulação
+            if (!e.getMessage().contains("not known")) {
+                System.err.printf("Erro ao coletar dados do veiculo %s no tempo %.1f: %s\n", 
+                                 vehicleId, timestamp, e.getMessage());
+            }
             return null;
         }
     }
@@ -235,15 +410,6 @@ public class DataReconciliation {
     }
     
     /**
-     * Verifica se o veículo ainda está na simulação
-     */
-    private boolean isVehicleInSimulation() throws InterruptedException, ExecutionException {
-        CompletableFuture<SumoStringList> idListFuture = sumoExecutor.submitCommand(new GetVehicleIDListCommand());
-        SumoStringList idList = idListFuture.get();
-        return idList != null && idList.contains(vehicleId);
-    }
-    
-    /**
      * Obtém o tempo atual da simulação SUMO
      */
     private double getCurrentSimulationTime() throws InterruptedException, ExecutionException {
@@ -255,27 +421,29 @@ public class DataReconciliation {
      * Executa a reconciliação de dados
      */
     public void executeReconciliation() {
-        System.out.println("🔄 Executando reconciliação de dados...");
+        System.out.println("Executando reconciliacao de dados...");
         
         if (sensorReadings.isEmpty()) {
-            System.out.println(" Nenhuma leitura disponível para reconciliação");
+            System.out.println("Nenhuma leitura disponivel para reconciliacao");
             return;
         }
         
-        // Calcular estatísticas básicas
-        calculateStatistics();
+        // Calcular estatísticas para cada sensor
+        for (DistanceSensor sensor : distanceSensors) {
+            sensor.calculateStatistics();
+        }
         
-        // Reconciliar medidores de fluxo
-        reconcileFlowMeters();
+        // Calcular estatísticas globais
+        calculateGlobalStatistics();
         
-        System.out.println(" Reconciliação de dados concluída");
+        System.out.println("Reconciliacao de dados concluida");
         printStatistics();
     }
     
     /**
-     * Calcula estatísticas de reconciliação
+     * Calcula estatísticas globais de reconciliação
      */
-    private void calculateStatistics() {
+    private void calculateGlobalStatistics() {
         List<Double> measuredSpeeds = new ArrayList<>();
         List<Double> realSpeeds = new ArrayList<>();
         
@@ -305,47 +473,32 @@ public class DataReconciliation {
     }
     
     /**
-     * Reconcilia os medidores de fluxo
-     */
-    private void reconcileFlowMeters() {
-        for (FlowMeter meter : flowMeters) {
-            // Simular medição de fluxo baseada nas leituras próximas
-            double totalFlow = 0;
-            int count = 0;
-            
-            for (SensorReading reading : sensorReadings) {
-                // Calcular posição relativa (0.0 a 1.0)
-                double relativePosition = reading.distance / routeLength;
-                
-                // Se a leitura está próxima do medidor
-                if (Math.abs(relativePosition - meter.position) <= 0.1) {
-                    totalFlow += reading.realSpeed;
-                    count++;
-                }
-            }
-            
-            if (count > 0) {
-                meter.measuredFlow = totalFlow / count;
-                // Aplicar reconciliação (simplificada)
-                meter.reconciledFlow = meter.measuredFlow * (1.0 + bias / meanSpeed);
-                meter.uncertainty = standardDeviation;
-            }
-        }
-    }
-    
-    /**
      * Imprime estatísticas de reconciliação
      */
     private void printStatistics() {
-        System.out.println("\n -----ESTATÍSTICAS DE RECONCILIAÇÃO------");
-        System.out.printf("Velocidade média: %.2f km/h\n", meanSpeed);
-        System.out.printf("Desvio padrão: %.2f km/h\n", standardDeviation);
-        System.out.printf("Polarização (bias): %.2f km/h\n", bias);
-        System.out.printf("Precisão: %.2f%%\n", precision * 100);
+        System.out.println("\n-----ESTATISTICAS GLOBAIS DE RECONCILIACAO------");
+        System.out.printf("Velocidade media: %.2f km/h\n", meanSpeed);
+        System.out.printf("Desvio padrao: %.2f km/h\n", standardDeviation);
+        System.out.printf("Polarizacao (bias): %.2f km/h\n", bias);
+        System.out.printf("Precisao: %.2f%%\n", precision * 100);
         System.out.printf("Incerteza: %.2f km/h\n", uncertainty);
         System.out.printf("Comprimento da rota: %.2f km\n", routeLength);
-        System.out.printf("Tempo de simulação: %.1f segundos\n", simulationTime);
+        System.out.printf("Tempo de simulacao: %.1f segundos\n", simulationTime);
         System.out.printf("Total de leituras: %d\n", sensorReadings.size());
+        
+        System.out.println("\n-----ESTATISTICAS POR SENSOR------");
+        for (DistanceSensor sensor : distanceSensors) {
+            if (sensor.getReadingCount() > 0) {
+                System.out.printf("\nSensor %s (posicao %.1f km):\n", sensor.getId(), sensor.getDistancePosition());
+                System.out.printf("  Leituras: %d\n", sensor.getReadingCount());
+                System.out.printf("  Velocidade media: %.2f km/h\n", sensor.getMeanSpeed());
+                System.out.printf("  Desvio padrao: %.2f km/h\n", sensor.getStandardDeviation());
+                System.out.printf("  Polarizacao (bias): %.2f km/h\n", sensor.getBias());
+                System.out.printf("  Precisao: %.2f%%\n", sensor.getPrecision() * 100);
+                System.out.printf("  Incerteza: %.2f km/h\n", sensor.getUncertainty());
+                System.out.printf("  Erro medio: %.2f km/h\n", sensor.getMeanError());
+            }
+        }
     }
     
     /**
@@ -355,13 +508,15 @@ public class DataReconciliation {
         ManipuladorCSV report = new ManipuladorCSV(outputPath);
         
         // Cabeçalho
-        String[] header = {"Timestamp", "VehicleId", "RealSpeed", "MeasuredSpeed", "OptimalSpeed", 
+        String[] header = {"RunNumber", "SensorId", "Timestamp", "VehicleId", "RealSpeed", "MeasuredSpeed", "OptimalSpeed", 
                           "PositionX", "PositionY", "Distance", "FuelConsumption", "Error"};
         report.writeCSV(header);
         
         // Dados
         for (SensorReading reading : sensorReadings) {
             String[] data = {
+                String.valueOf(reading.runNumber),
+                reading.sensorId,
                 String.format("%.1f", reading.timestamp),
                 reading.vehicleId,
                 String.format("%.2f", reading.realSpeed),
@@ -376,12 +531,59 @@ public class DataReconciliation {
             report.appendCSV(data);
         }
         
-        System.out.printf(" Relatório salvo: %s\n", outputPath);
+        // Salvar relatório de estatísticas por sensor
+        saveSensorStatisticsReport(outputPath.replace(".csv", "_sensor_stats.csv"));
+        
+        System.out.printf("Relatorio salvo: %s\n", outputPath);
+    }
+    
+    /**
+     * Salva relatório de estatísticas por sensor
+     */
+    private void saveSensorStatisticsReport(String outputPath) {
+        ManipuladorCSV report = new ManipuladorCSV(outputPath);
+        
+        // Cabeçalho
+        String[] header = {"SensorId", "Position", "ReadingCount", "MeanSpeed", "StandardDeviation", 
+                          "Bias", "Precision", "Uncertainty", "MeanError"};
+        report.writeCSV(header);
+        
+        // Dados
+        for (DistanceSensor sensor : distanceSensors) {
+            if (sensor.getReadingCount() > 0) {
+                String[] data = {
+                    sensor.getId(),
+                    String.format("%.1f", sensor.getDistancePosition()),
+                    String.valueOf(sensor.getReadingCount()),
+                    String.format("%.2f", sensor.getMeanSpeed()),
+                    String.format("%.2f", sensor.getStandardDeviation()),
+                    String.format("%.2f", sensor.getBias()),
+                    String.format("%.2f", sensor.getPrecision() * 100),
+                    String.format("%.2f", sensor.getUncertainty()),
+                    String.format("%.2f", sensor.getMeanError())
+                };
+                report.appendCSV(data);
+            }
+        }
+        
+        System.out.printf("Relatorio de estatisticas por sensor salvo: %s\n", outputPath);
+    }
+    
+    /**
+     * Extrai o número da execução do ID do veículo
+     */
+    private int extractRunNumber(String vehicleId) {
+        Pattern pattern = Pattern.compile("_run(\\d+)$");
+        Matcher matcher = pattern.matcher(vehicleId);
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        return 1; // Default para veículos sem número de execução
     }
     
     // Getters públicos para acesso aos dados
     public List<SensorReading> getSensorReadings() { return sensorReadings; }
-    public List<FlowMeter> getFlowMeters() { return flowMeters; }
+    public List<DistanceSensor> getDistanceSensors() { return distanceSensors; }
     public double getMeanSpeed() { return meanSpeed; }
     public double getStandardDeviation() { return standardDeviation; }
     public double getBias() { return bias; }
@@ -389,5 +591,7 @@ public class DataReconciliation {
     public double getUncertainty() { return uncertainty; }
     public double getRouteLength() { return routeLength; }
     public double getSimulationTime() { return simulationTime; }
+    public int getTotalRuns() { return totalRuns; }
+    public List<String> getVehicleIds() { return vehicleIds; }
 }
 

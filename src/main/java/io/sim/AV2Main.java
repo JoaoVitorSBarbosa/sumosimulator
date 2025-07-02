@@ -24,11 +24,10 @@ import org.xml.sax.SAXException;
 
 /**
  * Classe principal do sistema AV2 integrado com SUMO
- * Combina Reconciliação de Dados (Parte I) e Escalonamento de Tempo Real (Parte
- * II)
- * com dados reais de velocidade e posição do SUMO
+ * Combina Reconciliação de Dados (Parte I) e Escalonamento de Tempo Real (Parte II)
+ * Modificada para executar 10 vezes a mesma rota em uma única simulação
  */
-public class AV2Main {
+public class AV2Main extends Thread{
 
     private SumoTraciConnection sumo;
     private SumoCommandExecutor sumoExecutor;
@@ -40,10 +39,10 @@ public class AV2Main {
     private Rota rota;
     private Car auto;
 
-    private static final String VEHICLE_ID = "0";
+    private static final String BASE_VEHICLE_ID = "0";
     private static final String OUTPUT_DIR = "reports/av2";
-    private static final int AQ_RATE = 500;
-    private static final int NUM_SIMS = 10;
+    private static final int TOTAL_RUNS = 10;
+    private static final String XML_FILE = "data/dados.xml";
     private SumoColor green;
 
     public static void main(String[] args) {
@@ -57,12 +56,14 @@ public class AV2Main {
                 // Inicializar SUMO e componentes
                 initializeSumo();
                 initializeComponents();
-
-                waitForVehicleInSimulation();
-                // Executar Reconciliação de Dados (Parte I)
+                
+                sleep(500);
+                
+                // Executar Reconciliação de Dados (Parte I) com 10 veículos em uma única simulação
                 executeDataReconciliation();
 
-                // FExecutar Escalonamento de Tempo Real (Parte II)
+                
+                // Executar Escalonamento de Tempo Real (Parte II)
                 executeRealTimeScheduling();
 
                 // Gerar gráficos
@@ -82,10 +83,9 @@ public class AV2Main {
     }
 
     /**
-     * Inicializa conexão com SUMO
+     * Inicializa conexão com SUMO usando o arquivo XML com 10 veículos
      */
     private void initializeSumo() throws IOException {
-
         String sumo_bin = "sumo-gui";
         String config_file = "map/map.sumo.cfg";
 
@@ -93,6 +93,9 @@ public class AV2Main {
         sumo = new SumoTraciConnection(sumo_bin, config_file);
         sumo.addOption("start", "1");
         sumo.addOption("quit-on-end", "1");
+        
+        // Usar o arquivo XML com 10 veículos
+        sumo.addOption("route-files", XML_FILE);
 
         // Iniciar servidor SUMO
         sumo.runServer(12345);
@@ -101,87 +104,59 @@ public class AV2Main {
         sumoExecutor = new SumoCommandExecutor(sumo);
         sumoExecutor.start();
 
-        System.out.println("SUMO inicializado e conectado");
+        System.out.println("SUMO inicializado e conectado com arquivo de rotas: " + XML_FILE);
     }
 
     /**
      * Inicializa componentes do sistema
      */
     private void initializeComponents() {
-
         // Criar diretório de saída
         java.io.File outputDir = new java.io.File(OUTPUT_DIR);
         if (!outputDir.exists()) {
             outputDir.mkdirs();
         }
 
-        // Inicializar componentes
-        dataReconciliation = new DataReconciliation(sumoExecutor, VEHICLE_ID);
-        realTimeScheduler = new RealTimeScheduler(1);
+        // Inicializar componentes com suporte para múltiplos veículos
+        dataReconciliation = new DataReconciliation(sumoExecutor, BASE_VEHICLE_ID, TOTAL_RUNS);
+        realTimeScheduler = new RealTimeScheduler(12);
         graphGenerator = new GraphGenerator(OUTPUT_DIR);
         banco = new AlphaBank();
         banco.start();
         company = new Company(this.sumoExecutor);
         company.start();
-        System.out.println("Componentes inicializados");
-    }
-
-    private void waitForVehicleInSimulation() throws InterruptedException, ExecutionException {
-        System.out.printf("Aguardando veículo %s aparecer na simulação...\n", VEHICLE_ID);
-
-        int maxAttempts = 100;
-        int attempts = 0;
-
-        while (attempts < maxAttempts) {
-            try {
-                // Avançar um passo da simulação
-                sumoExecutor.submitCommand(new DoTimestepCommand()).get();
-
-                // Verificar se veículo está presente
-                var idListFuture = sumoExecutor.submitCommand(new GetVehicleIDListCommand());
-                var idList = idListFuture.get();
-
-                if (idList != null && idList.contains(VEHICLE_ID)) {
-                    System.out.printf(" Veículo %s encontrado na simulação\n", VEHICLE_ID);
-                    return;
-                }
-
-                attempts++;
-                Thread.sleep(100);
-
-            } catch (Exception e) {
-                System.err.printf("⚠️  Tentativa %d falhou: %s\n", attempts, e.getMessage());
-                attempts++;
-            }
-        }
-
-        throw new RuntimeException("Veículo não encontrado após " + maxAttempts + " tentativas");
+        System.out.println("Componentes inicializados para " + TOTAL_RUNS + " execucoes");
     }
 
     /**
-     * Executa Reconciliação de Dados (Parte I)
+     * Executa Reconciliação de Dados (Parte I) - 10 veículos em uma única simulação
+     * Sensores distribuídos a cada 5km
      */
     private void executeDataReconciliation() throws InterruptedException, ExecutionException {
+        System.out.println("=== INICIANDO SIMULACAO COM 10 VEICULOS EM UMA UNICA EXECUCAO ===");
+        
         // Calcular tempo de simulação baseado na rota
         dataReconciliation.calculateSimulationTime();
-
-        // Executar coleta de dados da simulação SUMO
+        
+        // Executar coleta de dados para todos os veículos em uma única simulação
+        System.out.println("Coletando dados de todos os veiculos...");
         dataReconciliation.executeDataCollection();
-
-        // Executar reconciliação
+        
+        System.out.println("Iniciando reconciliacao de dados com todos os dados coletados...");
+        
+        // Executar reconciliação com todos os dados coletados
         dataReconciliation.executeReconciliation();
 
         // Salvar relatório
-        dataReconciliation.saveReconciliationReport(OUTPUT_DIR + "/reconciliation.csv");
+        dataReconciliation.saveReconciliationReport(OUTPUT_DIR + "/reconciliation_report.csv");
 
-        System.out.println("Reconciliação de dados concluída");
+        System.out.println("Reconciliacao de dados concluida");
     }
 
     /**
      * Executa Escalonamento de Tempo Real (Parte II)
      */
     private void executeRealTimeScheduling() {
-
         // Executar análise de escalonabilidade
         realTimeScheduler.executeSchedulabilityAnalysis();
 
@@ -192,41 +167,39 @@ public class AV2Main {
         realTimeScheduler.printSchedulingSummary();
 
         // Salvar relatório
-        realTimeScheduler.saveSchedulingReport(OUTPUT_DIR + "/scheduling.csv");
+        realTimeScheduler.saveSchedulingReport(OUTPUT_DIR + "/scheduling_report.csv");
 
-        System.out.println("Escalonamento de tempo real concluído");
+        System.out.println("Escalonamento de tempo real concluido");
     }
 
     /**
      * Chama a função para gerar os gráficos
      */
     private void generateGraphs() {
-
         // Gerar os 3 gráficos
         graphGenerator.generateAllGraphs(dataReconciliation, realTimeScheduler);
 
-        System.out.println("Gráficos gerados com sucesso");
+        System.out.println("Graficos gerados com sucesso");
     }
 
     /**
      * Gera relatórios finais consolidados
      */
     private void generateFinalReports() {
-
         // Relatório consolidado
         generateConsolidatedReport();
 
         // Relatório de estatísticas
         generateStatisticsReport();
 
-        System.out.println("Relatórios finais gerados!!");
+        System.out.println("Relatorios finais gerados");
     }
 
     /**
      * Gera relatório consolidado
      */
     private void generateConsolidatedReport() {
-        ManipuladorCSV report = new ManipuladorCSV(OUTPUT_DIR + "/consolidated.csv");
+        ManipuladorCSV report = new ManipuladorCSV(OUTPUT_DIR + "/consolidated_report.csv");
 
         String[] header = { "Component", "Status", "Details", "Value", "Unit" };
         report.writeCSV(header);
@@ -243,6 +216,12 @@ public class AV2Main {
                 String.format("%.2f", dataReconciliation.getMeanSpeed()), "km/h"
         };
         report.appendCSV(meanSpeedData);
+        
+        String[] totalRunsData = {
+                "Data_Reconciliation", "COMPLETED", "Total_Runs",
+                String.valueOf(dataReconciliation.getTotalRuns()), "runs"
+        };
+        report.appendCSV(totalRunsData);
 
         // Dados do escalonamento
         long schedulableTasks = realTimeScheduler.getTasks().stream()
@@ -268,7 +247,7 @@ public class AV2Main {
         };
         report.appendCSV(graphsData);
 
-        System.out.printf("Relatório consolidado salvo: %s\n", OUTPUT_DIR + "/consolidated.csv");
+        System.out.printf("Relatorio consolidado salvo: %s\n", OUTPUT_DIR + "/consolidated_report.csv");
     }
 
     /**
@@ -285,13 +264,15 @@ public class AV2Main {
                 { "Route_Length", String.format("%.2f", dataReconciliation.getRouteLength()), "km",
                         "Comprimento total da rota" },
                 { "Simulation_Time", String.format("%.1f", dataReconciliation.getSimulationTime()), "seconds",
-                        "Tempo total de simulação" },
+                        "Tempo por execucao" },
+                { "Total_Runs", String.valueOf(dataReconciliation.getTotalRuns()), "runs",
+                        "Numero total de execucoes" },
                 { "Mean_Speed", String.format("%.2f", dataReconciliation.getMeanSpeed()), "km/h",
-                        "Velocidade média medida" },
+                        "Velocidade media medida" },
                 { "Standard_Deviation", String.format("%.2f", dataReconciliation.getStandardDeviation()), "km/h",
-                        "Desvio padrão das velocidades" },
+                        "Desvio padrao das velocidades" },
                 { "Precision", String.format("%.2f", dataReconciliation.getPrecision() * 100), "percent",
-                        "Precisão da reconciliação" },
+                        "Precisao da reconciliacao" },
                 { "Uncertainty", String.format("%.2f", dataReconciliation.getUncertainty()), "km/h",
                         "Incerteza dos dados" }
         };
@@ -307,23 +288,23 @@ public class AV2Main {
         String[][] schedulingStats = {
                 { "Total_Tasks", String.valueOf(realTimeScheduler.getTasks().size()), "tasks",
                         "Total de tarefas analisadas" },
-                { "Schedulable_Tasks", String.valueOf(schedulableTasks), "tasks", "Tarefas escalonáveis" },
+                { "Schedulable_Tasks", String.valueOf(schedulableTasks), "tasks", "Tarefas escalonaveis" },
                 { "Processors", String.valueOf(realTimeScheduler.getNumberOfProcessors()), "units",
-                        "Número de processadores" },
+                        "Numero de processadores" },
                 { "Total_Utilization", String.format("%.2f", realTimeScheduler.getTotalUtilization()), "ratio",
-                        "Utilização total do sistema" },
+                        "Utilizacao total do sistema" },
                 { "Utilization_Percentage",
                         String.format("%.2f",
                                 (realTimeScheduler.getTotalUtilization() / realTimeScheduler.getNumberOfProcessors())
                                         * 100),
-                        "percent", "Percentual de utilização" }
+                        "percent", "Percentual de utilizacao" }
         };
 
         for (String[] stat : schedulingStats) {
             report.appendCSV(stat);
         }
 
-        System.out.printf(" Relatório de estatísticas salvo: %s\n", OUTPUT_DIR + "/statistics_summary.csv");
+        System.out.printf("Relatorio de estatisticas salvo: %s\n", OUTPUT_DIR + "/statistics_summary.csv");
     }
 
     /**
@@ -335,7 +316,7 @@ public class AV2Main {
                 sumo.close();
             }
 
-            System.out.println("Limpeza concluída");
+            System.out.println("Limpeza concluida");
 
         } catch (Exception e) {
             System.err.println("Erro na limpeza: " + e.getMessage());
@@ -346,17 +327,31 @@ public class AV2Main {
      * Imprime resumo final do sistema
      */
     private void printFinalSummary() {
+        System.out.println("\n=== RESUMO FINAL DO SISTEMA ===");
 
         // Resumo da reconciliação
-        System.out.printf("Reconciliação: %d leituras, %.2f km/h média\n",
+        System.out.printf("Reconciliacao: %d leituras de %d execucoes, %.2f km/h media\n",
                 dataReconciliation.getSensorReadings().size(),
+                dataReconciliation.getTotalRuns(),
                 dataReconciliation.getMeanSpeed());
+                
+        // Resumo dos sensores
+        System.out.println("\nEstatisticas por sensor:");
+        for (DataReconciliation.DistanceSensor sensor : dataReconciliation.getDistanceSensors()) {
+            if (sensor.getReadingCount() > 0) {
+                System.out.printf("Sensor %s: %d leituras, %.2f km/h media, %.2f desvio padrao\n",
+                    sensor.getId(), sensor.getReadingCount(), sensor.getMeanSpeed(), sensor.getStandardDeviation());
+            }
+        }
 
         // Resumo do escalonamento
         long schedulableTasks = realTimeScheduler.getTasks().stream()
                 .mapToLong(task -> task.isSchedulable() ? 1 : 0).sum();
 
-        System.out.printf("Escalonamento: %d/%d tarefas escalonáveis\n",
+        System.out.printf("\nEscalonamento: %d/%d tarefas escalonaveis\n",
                 schedulableTasks, realTimeScheduler.getTasks().size());
+                
+        System.out.println("\n=== SISTEMA FINALIZADO COM SUCESSO ===");
     }
 }
+

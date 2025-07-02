@@ -1,0 +1,2 @@
+SensorId,Position,ReadingCount,MeanSpeed,StandardDeviation,Bias,Precision,Uncertainty,MeanError
+S01,0,0,418,34,25,5,99,-0,22,85,11,6,00,1,57
