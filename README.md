@@ -266,6 +266,185 @@ Comando para definir o modo de velocidade de um veículo.
 ## Considerações Finais
 
 Esta documentação apresenta uma visão geral da estrutura do código do SUMO Simulator, focando nas classes e métodos principais. Para uma compreensão completa do sistema, é recomendável analisar o código-fonte e a documentação do SUMO, especialmente para entender as interações com o simulador através da API TraCI.
+# AV2 – Parte II: Reconciliação de Dados - Documentação
+
+## Arquivos Implementados
+
+### 1. AV2Main.java
+**Localização:** `src/main/java/io/sim/AV2Main.java`
+
+**Funcionalidades:**
+- Classe principal do sistema AV2
+- Gerenciamento de 10 execuções sequenciais
+- Inicialização e fechamento adequado do SUMO
+- Integração com DataReconciliation e RealTimeScheduler
+- Geração de relatórios consolidados
+
+**Fluxo de Execução:**
+```
+1. Inicialização dos componentes básicos
+2. Para cada execução (1 a 10):
+   - Inicializar SUMO com porta única
+   - Aguardar veículo aparecer na simulação
+   - Executar coleta de dados
+   - Fechar conexão SUMO
+   - Aguardar 3 segundos
+3. Executar reconciliação de dados
+4. Executar escalonamento de tempo real
+5. Gerar gráficos
+6. Gerar relatórios finais
+```
+
+### 2. DataReconciliation.java
+**Localização:** `src/main/java/io/sim/DataReconciliation.java`
+
+**Funcionalidades:**
+- Coleta de dados reais do SUMO
+- Cálculo de tempo de simulação baseado na rota
+- Execução de coleta para múltiplas execuções
+- Reconciliação de medidores de fluxo
+- Cálculo de estatísticas de reconciliação
+
+**Métodos Principais:**
+- `calculateSimulationTime()`: Calcula tempo baseado na rota
+- `executeDataCollectionForRun(int runNumber)`: Coleta dados para uma execução
+- `executeReconciliation()`: Executa reconciliação final
+- `saveReconciliationReport(String path)`: Salva relatório CSV
+
+**Estatísticas Calculadas:**
+- **Velocidade média**: Média de todas as velocidades medidas
+- **Desvio padrão**: Variabilidade das medições
+- **Polarização (bias)**: Diferença entre velocidade medida e real
+- **Precisão**: Qualidade das medições (1 / (1 + desvio/média))
+- **Incerteza**: Combinação de desvio padrão e bias
+
+### 3. GraphGenerator.java
+**Localização:** `src/main/java/io/sim/GraphGenerator.java`
+
+**Funcionalidades:**
+- Geração de 3 gráficos específicos
+- Compatibilidade com dados de múltiplas execuções
+- Visualização de estatísticas por sensor
+- Tratamento de erros e dados ausentes
+
+**Gráficos Gerados:**
+
+#### Gráfico 1: Velocidades Ótimas vs Velocidades Reais
+- **Arquivo:** `1_velocidades_otimas.png`
+- **Eixo X:** Distância (km) - posição dos sensores
+- **Eixo Y:** Velocidade (km/h)
+- **Dados:** Média das 10 execuções por sensor
+- **Cores:** Azul (velocidade real), Verde (velocidade ótima)
+
+#### Gráfico 2: Estatísticas de Reconciliação
+- **Arquivo:** `2_estatisticas_reconciliacao.png`
+- **Tipo:** Gráfico de barras
+- **Métricas:** Média, Desvio Padrão, Polarização, Precisão, Incerteza
+- **Cores:** Diferentes cores para cada métrica
+
+#### Gráfico 3: Medições dos Sensores de Velocidade
+- **Arquivo:** `3_medicao_sensores_velocidade.png`
+- **Eixo X:** Distância (km) - posição dos sensores
+- **Eixo Y:** Velocidade medida (km/h)
+- **Dados:** 10 pontos por sensor com offset para evitar sobreposição
+- **Visualização:** Círculos (velocidade real), Quadrados (velocidade medida)
+
+### 4. RealTimeScheduler.java
+**Localização:** `src/main/java/io/sim/RealTimeScheduler.java`
+
+**Funcionalidades:**
+- Escalonamento de tempo real para 10 tarefas
+- Análise de escalonabilidade
+- Teste com diferentes configurações de processadores
+- Demonstração de não-escalonabilidade
+
+**Métodos Utilizados:**
+- `executeSchedulabilityAnalysis()`: Análise principal
+- `demonstrateNonSchedulability()`: Demonstra casos não escalonáveis
+- `printSchedulingSummary()`: Imprime resumo
+- `saveSchedulingReport(String path)`: Salva relatório
+
+## Estrutura de Dados
+
+### SensorReading
+```java
+public static class SensorReading {
+    public double timestamp;        // Tempo da simulação
+    public String vehicleId;        // ID do veículo
+    public int runNumber;          // Número da execução (1-10)
+    public double realSpeed;       // Velocidade real (km/h)
+    public double measuredSpeed;   // Velocidade medida com ruído (km/h)
+    public double optimalSpeed;    // Velocidade ótima calculada (km/h)
+    public SumoPosition2D position; // Posição GPS
+    public double distance;        // Distância percorrida (km)
+    public double fuelConsumption; // Consumo de combustível (L)
+    public double error;           // Erro de medição (km/h)
+}
+```
+
+### FlowMeter
+```java
+public static class FlowMeter {
+    public String id;              // ID do medidor (FM_01, FM_02, etc.)
+    public double position;        // Posição relativa (0.0 a 1.0)
+    public double measuredFlow;    // Fluxo medido
+    public double reconciledFlow;  // Fluxo reconciliado
+    public double uncertainty;     // Incerteza da medição
+}
+```
+
+## Tabela de Consumo Fox 1.0
+
+O sistema utiliza a seguinte tabela para calcular velocidades ótimas:
+
+| Velocidade Atual | Velocidade Ótima | Justificativa |
+|------------------|------------------|---------------|
+| ≤ 60 km/h | 60 km/h | Velocidade mínima eficiente |
+| 61-80 km/h | 75 km/h | Faixa de maior eficiência |
+| 81-100 km/h | 85 km/h | Compromisso velocidade/consumo |
+| > 100 km/h | 90 km/h | Velocidade máxima recomendada |
+
+## Configuração do Sistema
+
+### Parâmetros de Simulação
+- **Rota total:** 29 km (baseado nos 29 edges do XML)
+- **Intervalo de sensores:** 5 km
+- **Número de sensores:** 6
+- **Execuções por sensor:** 10
+- **Total de leituras esperadas:** 60 (6 sensores × 10 execuções)
+
+### Configuração SUMO
+- **Veículo monitorado:** ID "0"
+- **Portas utilizadas:** 12346-12355 (uma por execução)
+- **Modo:** sumo-gui (interface gráfica)
+- **Arquivo de configuração:** map/map.sumo.cfg
+
+## Relatórios Gerados
+
+### 1. Relatório de Reconciliação
+**Arquivo:** `reports/av2/reconciliation_report.csv`
+
+**Seções:**
+- **Estatísticas por Sensor:** Posição, medições, média, desvio padrão, etc.
+- **Estatísticas Globais:** Métricas consolidadas do sistema
+- **Leituras Detalhadas:** Todos os dados coletados linha por linha
+
+### 2. Relatório de Escalonamento
+**Arquivo:** `reports/av2/scheduling_report.csv`
+
+**Dados:**
+- TaskId, Priority, Period, Deadline, ExecutionTime
+- ResponseTime, Schedulable, Dependencies, Utilization
+
+### 3. Relatório Consolidado
+**Arquivo:** `reports/av2/consolidated_report.csv`
+
+**Componentes:**
+- Sistema AV2: Status e número de execuções
+- Sensores por Distância: Configuração ativa
+- Reconciliação de Dados: Status da análise
+- Escalonamento Tempo Real: Resultado da análise
+- Gráficos: Status da geração
 
 # AV2 – Parte II: Escalonamento de Tempo Real - Documentação
 
